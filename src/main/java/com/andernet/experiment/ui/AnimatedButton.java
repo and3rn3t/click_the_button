@@ -7,6 +7,7 @@ public class AnimatedButton extends JButton {
     private float alpha = 1.0f;
     public AnimatedButton(String text) { super(text); }
     public void setAlpha(float a) { alpha = a; repaint(); }
+    public float getAlpha() { return alpha; }
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2 = (Graphics2D) g.create();
