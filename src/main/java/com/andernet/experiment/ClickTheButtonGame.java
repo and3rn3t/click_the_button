@@ -7,7 +7,27 @@ import java.awt.event.ActionListener;
 import java.util.Random;
 
 public class ClickTheButtonGame extends JFrame {
-    private JButton button;
+    // Custom button class for alpha animation
+    private class AnimatedButton extends JButton {
+        private float alpha = 1.0f;
+        public AnimatedButton(String text) { super(text); }
+        public void setAlpha(float a) { alpha = a; repaint(); }
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+            // Drop shadow
+            g2.setColor(new Color(0,0,0,60));
+            g2.fillRoundRect(4, 4, getWidth()-8, getHeight()-8, 30, 30);
+            g2.setColor(getBackground());
+            g2.fillRoundRect(0, 0, getWidth()-8, getHeight()-8, 30, 30);
+            super.paintComponent(g2);
+            g2.dispose();
+        }
+    }
+
+    private AnimatedButton button;
     private JLabel scoreLabel;
     private JLabel timerLabel;
     private JLabel highScoreLabel;
@@ -27,7 +47,20 @@ public class ClickTheButtonGame extends JFrame {
         setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
-        getContentPane().setBackground(new Color(240, 248, 255)); // Soft blue background
+        setUndecorated(true);
+        getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
+        setLocationRelativeTo(null);
+        setBackground(new Color(0,0,0,0));
+        setContentPane(new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                GradientPaint gp = new GradientPaint(0, 0, new Color(240, 248, 255), 0, getHeight(), new Color(197, 225, 165));
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+            }
+        });
+        getContentPane().setLayout(null);
 
         Font mainFont = new Font("Segoe UI", Font.BOLD, 20);
         Font labelFont = new Font("Segoe UI", Font.BOLD, 16);
@@ -56,24 +89,14 @@ public class ClickTheButtonGame extends JFrame {
         highScoreLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2, true));
         add(highScoreLabel);
 
-        button = new JButton("Click me!") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
-                super.paintComponent(g2);
-                g2.dispose();
-            }
-        };
+        button = new AnimatedButton("Click me!");
         button.setFont(mainFont);
         button.setFocusPainted(false);
         button.setContentAreaFilled(false);
-        button.setOpaque(true);
+        button.setOpaque(false);
         button.setBackground(new Color(100, 181, 246));
         button.setForeground(Color.WHITE);
-        button.setBounds(150, 150, 100, 50);
+        button.setBounds((WINDOW_WIDTH-100)/2, (WINDOW_HEIGHT-50)/2, 100, 50);
         button.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -85,9 +108,19 @@ public class ClickTheButtonGame extends JFrame {
                 scoreLabel.setText("Score: " + score);
                 playClickSound();
                 nextLevel();
-                moveButton();
+                fadeMoveButton();
                 moveFakeButtons();
                 randomizeColors();
+            }
+        });
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(33, 150, 243));
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(100, 181, 246));
             }
         });
         add(button);
@@ -100,8 +133,11 @@ public class ClickTheButtonGame extends JFrame {
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    // Drop shadow
+                    g2.setColor(new Color(0,0,0,40));
+                    g2.fillRoundRect(4, 4, getWidth()-8, getHeight()-8, 30, 30);
                     g2.setColor(getBackground());
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                    g2.fillRoundRect(0, 0, getWidth()-8, getHeight()-8, 30, 30);
                     super.paintComponent(g2);
                     g2.dispose();
                 }
@@ -109,7 +145,7 @@ public class ClickTheButtonGame extends JFrame {
             fakeButtons[i].setFont(mainFont.deriveFont(Font.PLAIN, 18f));
             fakeButtons[i].setFocusPainted(false);
             fakeButtons[i].setContentAreaFilled(false);
-            fakeButtons[i].setOpaque(true);
+            fakeButtons[i].setOpaque(false);
             fakeButtons[i].setBackground(new Color(244, 67, 54));
             fakeButtons[i].setForeground(Color.WHITE);
             fakeButtons[i].setBounds(0, 0, 80, 40);
@@ -217,6 +253,23 @@ public class ClickTheButtonGame extends JFrame {
                 for (int i = 0; i < 3; i++) {
                     java.awt.Toolkit.getDefaultToolkit().beep();
                     Thread.sleep(100);
+                }
+            } catch (InterruptedException ignored) {}
+        }).start();
+    }
+
+    private void fadeMoveButton() {
+        // Fade out, move, fade in
+        new Thread(() -> {
+            try {
+                for (float a = 1.0f; a >= 0.1f; a -= 0.1f) {
+                    button.setAlpha(a);
+                    Thread.sleep(10);
+                }
+                moveButton();
+                for (float a = 0.1f; a <= 1.0f; a += 0.1f) {
+                    button.setAlpha(a);
+                    Thread.sleep(10);
                 }
             } catch (InterruptedException ignored) {}
         }).start();
