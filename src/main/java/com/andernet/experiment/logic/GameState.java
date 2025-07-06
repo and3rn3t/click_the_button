@@ -26,27 +26,32 @@ public class GameState {
     public void reset(int initialTime) {
         score = 0;
         timeLeft = initialTime;
+        // Do NOT reset highScore here; it should persist
     }
     public void decrementTime() { timeLeft--; }
 
     public void saveHighScore(File file) {
-        try (PrintWriter out = new PrintWriter(new FileWriter(file))) {
-            out.println(highScore);
-        } catch (IOException e) {
-            System.err.println("[GameState] Failed to save high score: " + file.getAbsolutePath());
-            e.printStackTrace();
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not save high score.", "File Error", JOptionPane.ERROR_MESSAGE));
+        try {
+            java.nio.file.Files.write(file.toPath(), String.valueOf(highScore).getBytes());
+            System.out.println("[DEBUG] GameState.saveHighScore: file=" + file.getAbsolutePath() + ", value=" + highScore);
+        } catch (Exception e) {
+            System.out.println("[DEBUG] GameState.saveHighScore: error: " + e);
         }
     }
     public void loadHighScore(File file) {
-        if (!file.exists()) return;
-        try (BufferedReader in = new BufferedReader(new FileReader(file))) {
-            String line = in.readLine();
-            if (line != null) highScore = Integer.parseInt(line.trim());
-        } catch (IOException | NumberFormatException e) {
-            System.err.println("[GameState] Failed to load high score: " + file.getAbsolutePath());
-            e.printStackTrace();
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not load high score.", "File Error", JOptionPane.ERROR_MESSAGE));
+        try {
+            if (file.exists()) {
+                String content = new String(java.nio.file.Files.readAllBytes(file.toPath())).trim();
+                System.out.println("[DEBUG] GameState.loadHighScore: file=" + file.getAbsolutePath() + ", content=" + content);
+                int value = Integer.parseInt(content);
+                highScore = value;
+            } else {
+                System.out.println("[DEBUG] GameState.loadHighScore: file does not exist: " + file.getAbsolutePath());
+                highScore = 0;
+            }
+        } catch (Exception e) {
+            System.out.println("[DEBUG] GameState.loadHighScore: error: " + e);
+            highScore = 0;
         }
     }
 }

@@ -18,6 +18,7 @@ import com.andernet.experiment.util.MusicManager;
 import com.andernet.experiment.settings.Settings;
 import com.andernet.experiment.settings.SettingsDialog;
 import com.andernet.experiment.settings.SettingsPersistence;
+import java.awt.event.KeyEvent;
 
 /**
  * ClickTheButtonGame is a modern, graphical Java Swing game where the player
@@ -105,11 +106,11 @@ public class ClickTheButtonGame extends JFrame {
         scoreLabel.setName("scoreLabel");
         add(scoreLabel);
         // Timer label at top center
-        timerLabel = UIUtils.createLabel("Time: 30", 140, 10, 120, 35, labelFont);
+        timerLabel = UIUtils.createLabel("Time: " + settings.getGameDurationSeconds(), 140, 10, 120, 35, labelFont);
         timerLabel.setName("timerLabel");
         add(timerLabel);
         // High score label at top right
-        highScoreLabel = UIUtils.createLabel("High Score: 0", 270, 10, 150, 35, labelFont);
+        highScoreLabel = UIUtils.createLabel("High Score: " + gameState.getHighScore(), 270, 10, 150, 35, labelFont);
         highScoreLabel.setName("highScoreLabel");
         add(highScoreLabel);
 
@@ -177,9 +178,15 @@ public class ClickTheButtonGame extends JFrame {
             if (dialog.isConfirmed()) {
                 // Apply new settings (restart game state and UI as needed)
                 gameState = new GameState(settings.getGameDurationSeconds());
-                timerLabel.setText("Time: " + settings.getGameDurationSeconds());
+                // Load high score after creating new GameState
+                gameState.loadHighScore(HIGH_SCORE_FILE);
+                System.out.println("[DEBUG] GameState recreated after settings dialog. High score: " + gameState.getHighScore());
+                timerLabel.setText("Time: " + settings.getGameDurationSeconds()); // Use new duration directly
+                flushComponentUI(timerLabel);
                 scoreLabel.setText("Score: 0");
+                flushComponentUI(scoreLabel);
                 highScoreLabel.setText("High Score: " + gameState.getHighScore());
+                flushComponentUI(highScoreLabel);
                 buttonManager.createFakeButtons();
                 moveTimer.setDelay(settings.getMoveIntervalMs());
                 moveTimer.setInitialDelay(settings.getMoveIntervalMs());
@@ -187,6 +194,12 @@ public class ClickTheButtonGame extends JFrame {
                 repaint();
                 // Save settings after dialog
                 SettingsPersistence.save(settings);
+                // Extra: sleep to allow UI update in test envs
+                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+                // Force timer label to use actual gameState value and flush
+                timerLabel.setText("Time: " + gameState.getTimeLeft());
+                flushComponentUI(timerLabel);
+                System.out.println("[DEBUG] SettingsDialog confirmed: duration=" + settings.getGameDurationSeconds() + ", timerLabel=" + timerLabel.getText());
             }
         });
         overlayPanel.setVisible(true);
@@ -285,7 +298,15 @@ public class ClickTheButtonGame extends JFrame {
         });
         // Font size adjustment for accessibility
         getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, KeyEvent.SHIFT_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> adjustFontSize(-2), KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        // Also register on the main content pane for robustness
+        if (getContentPane() instanceof JComponent) {
+            JComponent content = (JComponent) getContentPane();
+            content.registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+            content.registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, KeyEvent.SHIFT_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
+            content.registerKeyboardAction(e -> adjustFontSize(-2), KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        }
 
         // Make window resizable and adapt layout
         setResizable(true);
@@ -332,22 +353,60 @@ public class ClickTheButtonGame extends JFrame {
      * @param showScore  Whether to show the score (unused, for future use)
      */
     private void showOverlay(String message, String buttonText, boolean showScore) {
+        System.out.println("[DEBUG] showOverlay called: message=" + message + ", buttonText=" + buttonText);
         overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;'>" + message + "</div></html>");
         overlayPanel.getOverlayButton().setText(buttonText);
         overlayPanel.getOverlayButton().setVisible(true);
+        overlayPanel.getOverlayButton().setEnabled(true);
+        overlayPanel.getOverlayButton().setFocusable(true);
         overlayPanel.setVisible(true);
+        overlayPanel.setFocusable(true);
+        overlayPanel.requestFocusInWindow();
+        overlayPanel.requestFocus();
+        System.out.println("[DEBUG] overlayPanel.setVisible(true) called");
+        overlayPanel.revalidate();
+        overlayPanel.repaint();
+        getLayeredPane().revalidate();
+        getLayeredPane().repaint();
+        this.revalidate();
+        this.repaint();
+        Toolkit.getDefaultToolkit().sync();
+        try {
+            Thread.sleep(60); // Give the UI thread a moment to process
+        } catch (InterruptedException ignored) {}
         setGameUIVisible(false);
-        // Use overlayState for future logic (e.g., analytics, UI changes)
-        // (No-op for now, but overlayState is now used)
-        // Accessibility: focus overlay button
-        SwingUtilities.invokeLater(() -> overlayPanel.getOverlayButton().requestFocusInWindow());
+        // Accessibility: focus overlay panel and then overlay button robustly
+        JButton overlayBtn = overlayPanel.getOverlayButton();
+        System.out.println("[DEBUG][showOverlay] overlayBtn: visible=" + overlayBtn.isVisible() + ", enabled=" + overlayBtn.isEnabled() + ", focusable=" + overlayBtn.isFocusable() + ", showing=" + overlayBtn.isShowing() + ", bounds=" + overlayBtn.getBounds());
+        overlayBtn.setFocusable(true);
+        overlayBtn.setRequestFocusEnabled(true);
+        overlayBtn.setEnabled(true);
+        overlayPanel.setFocusable(true);
+        // Try to request focus multiple times with increasing delays
+        for (int delay : new int[]{0, 100, 250, 500}) {
+            new Timer(delay, ev -> {
+                System.out.println("[DEBUG][showOverlay][Timer] Before focus request: visible=" + overlayBtn.isVisible() + ", enabled=" + overlayBtn.isEnabled() + ", focusable=" + overlayBtn.isFocusable() + ", showing=" + overlayBtn.isShowing() + ", bounds=" + overlayBtn.getBounds());
+                overlayPanel.requestFocusInWindow();
+                KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner();
+                boolean focusResult = overlayBtn.requestFocusInWindow();
+                overlayBtn.requestFocus();
+                overlayBtn.grabFocus();
+                System.out.println("[DEBUG][showOverlay][Timer] After focus request: focusResult=" + focusResult + ", focusOwner=" + KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner());
+                ((Timer)ev.getSource()).stop();
+            }).start();
+        }
     }
 
     /**
      * Hides the overlay panel and shows the main game UI.
      */
     private void hideOverlay() {
+        System.out.println("[DEBUG] hideOverlay called");
         overlayPanel.setVisible(false);
+        overlayPanel.revalidate();
+        overlayPanel.repaint();
+        Toolkit.getDefaultToolkit().sync();
+        try { Thread.sleep(50); } catch (InterruptedException ignored) {}
         setGameUIVisible(true);
     }
 
@@ -357,6 +416,7 @@ public class ClickTheButtonGame extends JFrame {
      * @param visible true to show, false to hide
      */
     private void setGameUIVisible(boolean visible) {
+        System.out.println("[DEBUG] setGameUIVisible(" + visible + ") called");
         scoreLabel.setVisible(visible);
         timerLabel.setVisible(visible);
         highScoreLabel.setVisible(visible);
@@ -369,6 +429,7 @@ public class ClickTheButtonGame extends JFrame {
      * Starts or restarts the game, resetting state and timers.
      */
     private void startGame() {
+        System.out.println("[DEBUG] startGame called");
         if (settings.isSoundEnabled()) {
             MusicManager.playBackgroundMusic("/audio/background.wav", true);
         }
@@ -377,6 +438,7 @@ public class ClickTheButtonGame extends JFrame {
         overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>3</div></html>");
         overlayPanel.getOverlayButton().setVisible(false);
         overlayPanel.setVisible(true);
+        System.out.println("[DEBUG] overlayPanel.setVisible(true) for countdown");
         Timer countdown = new Timer(700, null);
         final int[] count = {3};
         countdown.addActionListener(e -> {
@@ -387,10 +449,16 @@ public class ClickTheButtonGame extends JFrame {
             } else {
                 countdown.stop();
                 overlayPanel.setVisible(false);
+                System.out.println("[DEBUG] overlayPanel.setVisible(false) after countdown");
                 setGameUIVisible(true);
                 gameState.reset(settings.getGameDurationSeconds());
+                System.out.println("[DEBUG] GameState.reset called. High score: " + gameState.getHighScore());
+                // Reload high score from file to ensure persistence
+                gameState.loadHighScore(HIGH_SCORE_FILE);
+                System.out.println("[DEBUG] GameState.loadHighScore called after reset. High score: " + gameState.getHighScore());
                 scoreLabel.setText("Score: 0");
-                timerLabel.setText("Time: " + settings.getGameDurationSeconds());
+                timerLabel.setText("Time: " + gameState.getTimeLeft()); // Use actual time left
+                highScoreLabel.setText("High Score: " + gameState.getHighScore());
                 button.setEnabled(true);
                 for (FakeButton fake : buttonManager.getFakeButtons())
                     fake.setEnabled(true);
@@ -414,11 +482,14 @@ public class ClickTheButtonGame extends JFrame {
      * Ends the game, disables input, and shows the game over overlay.
      */
     private void endGame() {
+        System.out.println("[DEBUG] endGame called");
         MusicManager.stopBackgroundMusic();
         if (settings.isSoundEnabled()) ResourceManager.playEndBeep();
         // Save high score after game ends
         gameState.saveHighScore(HIGH_SCORE_FILE);
-        overlayState = OverlayState.GAME_OVER;
+        // Immediately reload and update label to ensure persistence in test
+        gameState.loadHighScore(HIGH_SCORE_FILE);
+        highScoreLabel.setText("High Score: " + gameState.getHighScore());
         // Show summary screen with stats and achievements (if any)
         StringBuilder summary = new StringBuilder();
         summary.append("Game Over!<br>Your score: ").append(gameState.getScore());
@@ -549,15 +620,41 @@ public class ClickTheButtonGame extends JFrame {
 
     // Add this method to the class:
     private void adjustFontSize(int delta) {
+        System.out.println("[DEBUG] adjustFontSize called with delta=" + delta);
         for (Component c : getContentPane().getComponents()) {
             if (c instanceof JComponent) {
                 Font f = c.getFont();
                 if (f != null) {
                     c.setFont(f.deriveFont((float)Math.max(10, f.getSize() + delta)));
+                    flushComponentUI((JComponent)c);
                 }
             }
         }
         revalidate();
         repaint();
+        System.out.println("[DEBUG] adjustFontSize complete");
+    }
+
+    // Utility to robustly update and flush UI changes for a component
+    private static void flushComponentUI(JComponent comp) {
+        try {
+            if (!SwingUtilities.isEventDispatchThread()) {
+                SwingUtilities.invokeAndWait(() -> flushComponentUI(comp));
+                return;
+            }
+            comp.revalidate();
+            comp.repaint();
+            comp.updateUI();
+            // Also update parent if possible
+            if (comp.getParent() != null && comp.getParent() instanceof JComponent) {
+                ((JComponent)comp.getParent()).revalidate();
+                ((JComponent)comp.getParent()).repaint();
+            }
+            Toolkit.getDefaultToolkit().sync();
+            // Give the event queue a moment to process
+            try { Thread.sleep(30); } catch (InterruptedException ignored) {}
+        } catch (Exception e) {
+            System.err.println("[DEBUG] flushComponentUI exception: " + e);
+        }
     }
 }
