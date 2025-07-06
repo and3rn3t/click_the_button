@@ -40,6 +40,9 @@ public class ClickTheButtonGame extends JFrame {
     private Timer gameTimer;
     private JButton[] fakeButtons;
     private final int NUM_FAKE_BUTTONS = 2;
+    private JPanel overlayPanel;
+    private JLabel overlayLabel;
+    private JButton overlayButton;
 
     public ClickTheButtonGame() {
         setTitle("Click the Button Game");
@@ -158,7 +161,67 @@ public class ClickTheButtonGame extends JFrame {
             add(fakeButtons[i]);
         }
 
+        // Overlay panel for start/game over screens
+        overlayPanel = new JPanel();
+        overlayPanel.setLayout(new BoxLayout(overlayPanel, BoxLayout.Y_AXIS));
+        overlayPanel.setOpaque(false);
+        overlayPanel.setBounds(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+        overlayLabel = new JLabel("Click the Button Game", SwingConstants.CENTER);
+        overlayLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        overlayLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        overlayLabel.setForeground(new Color(33, 33, 33));
+        overlayPanel.add(Box.createVerticalGlue());
+        overlayPanel.add(overlayLabel);
+        overlayPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        overlayButton = new JButton("Start Game");
+        overlayButton.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        overlayButton.setFocusPainted(false);
+        overlayButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        overlayButton.setBackground(new Color(100, 181, 246));
+        overlayButton.setForeground(Color.WHITE);
+        overlayButton.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
+        overlayButton.addActionListener(e -> {
+            hideOverlay();
+            startGame();
+        });
+        overlayPanel.add(overlayButton);
+        overlayPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        JLabel instructions = new JLabel("Click the blue button as many times as you can in 30 seconds!\nAvoid the red fake buttons.", SwingConstants.CENTER);
+        instructions.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        instructions.setAlignmentX(Component.CENTER_ALIGNMENT);
+        instructions.setForeground(new Color(60, 60, 60));
+        overlayPanel.add(instructions);
+        overlayPanel.add(Box.createVerticalGlue());
+
+        overlayPanel.setVisible(true);
+        getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
+        showOverlay("Click the Button Game", "Start Game", false);
+
         startGame();
+    }
+
+    private void showOverlay(String message, String buttonText, boolean showScore) {
+        overlayLabel.setText("<html><div style='text-align:center;'>" + message + "</div></html>");
+        overlayButton.setText(buttonText);
+        overlayButton.setVisible(true);
+        overlayPanel.setVisible(true);
+        setGameUIVisible(false);
+    }
+
+    private void hideOverlay() {
+        overlayPanel.setVisible(false);
+        setGameUIVisible(true);
+    }
+
+    private void setGameUIVisible(boolean visible) {
+        scoreLabel.setVisible(visible);
+        timerLabel.setVisible(visible);
+        highScoreLabel.setVisible(visible);
+        button.setVisible(visible);
+        for (JButton fake : fakeButtons) fake.setVisible(visible);
     }
 
     private void startGame() {
@@ -168,6 +231,8 @@ public class ClickTheButtonGame extends JFrame {
         timerLabel.setText("Time: 30");
         button.setEnabled(true);
         for (JButton fake : fakeButtons) fake.setEnabled(true);
+        setGameUIVisible(true);
+        overlayPanel.setVisible(false);
         gameTimer = new Timer(1000, e -> {
             timeLeft--;
             timerLabel.setText("Time: " + timeLeft);
@@ -183,8 +248,7 @@ public class ClickTheButtonGame extends JFrame {
         button.setEnabled(false);
         for (JButton fake : fakeButtons) fake.setEnabled(false);
         playEndSound();
-        JOptionPane.showMessageDialog(this, "Time's up! Your score: " + score);
-        startGame();
+        showOverlay("Game Over!<br>Your score: " + score, "Play Again", true);
     }
 
     private void nextLevel() {
