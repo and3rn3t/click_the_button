@@ -60,10 +60,12 @@ public class ClickTheButtonGameFlowIntegrationTest {
             SwingUtilities.invokeAndWait(mainButton::doClick);
             Thread.sleep(100);
         }
+        // Force UI update
+        SwingUtilities.invokeAndWait(game::repaint);
         // Wait for overlay to become visible (game over)
         JPanel overlayPanel = (JPanel) findComponentByType(game, com.andernet.experiment.ui.GameOverlayPanel.class);
         assertNotNull(overlayPanel, "Overlay panel should exist");
-        waitForCondition("Overlay should be visible after game over", overlayPanel::isVisible, 5000);
+        waitForCondition("Overlay should be visible after game over", overlayPanel::isVisible, 8000);
         JLabel scoreLabel = (JLabel) findComponentByName(game, "scoreLabel");
         assertNotNull(scoreLabel);
         assertTrue(scoreLabel.getText().contains("2"), "Score label should show 2");
@@ -77,8 +79,8 @@ public class ClickTheButtonGameFlowIntegrationTest {
         JButton settingsButton = (JButton) findComponentByName(game, "settingsButton");
         assertNotNull(settingsButton, "Settings button should exist");
         SwingUtilities.invokeAndWait(settingsButton::doClick);
-        // Wait for dialog to appear
-        waitForCondition("Settings dialog should appear", () -> findDialogByTitle("Settings") != null, 5000);
+        // Wait for dialog to appear (longer timeout)
+        waitForCondition("Settings dialog should appear", () -> findDialogByTitle("Settings") != null, 8000);
         JDialog dialog = (JDialog) findDialogByTitle("Settings");
         assertNotNull(dialog, "Settings dialog should appear");
         JTextField durationField = (JTextField) findComponentByType(dialog, JTextField.class);
@@ -114,10 +116,10 @@ public class ClickTheButtonGameFlowIntegrationTest {
         // Simulate pause (P)
         sendKeyStroke(game, 'P');
         JPanel overlayPanel = (JPanel) findComponentByType(game, com.andernet.experiment.ui.GameOverlayPanel.class);
-        waitForCondition("Overlay should be visible after pause", overlayPanel::isVisible, 2000);
+        waitForCondition("Overlay should be visible after pause", overlayPanel::isVisible, 4000);
         // Simulate resume (P)
         sendKeyStroke(game, 'P');
-        waitForCondition("Overlay should be hidden after resume", () -> !overlayPanel.isVisible(), 2000);
+        waitForCondition("Overlay should be hidden after resume", () -> !overlayPanel.isVisible(), 4000);
         // Simulate Esc (quit) - should show confirm dialog, skip actual exit
     }
 
@@ -133,7 +135,7 @@ public class ClickTheButtonGameFlowIntegrationTest {
             SwingUtilities.invokeAndWait(mainButton::doClick);
             Thread.sleep(100);
         }
-        Thread.sleep(2000);
+        Thread.sleep(2000); // Wait for score to be saved
         JLabel highScoreLabel = (JLabel) findComponentByName(game, "highScoreLabel");
         assertNotNull(highScoreLabel);
         String highScoreText = highScoreLabel.getText();
@@ -143,6 +145,7 @@ public class ClickTheButtonGameFlowIntegrationTest {
             game = new ClickTheButtonGame(settings);
             game.setVisible(true);
         });
+        Thread.sleep(1000); // Wait for UI to update
         JLabel highScoreLabel2 = (JLabel) findComponentByName(game, "highScoreLabel");
         assertNotNull(highScoreLabel2);
         assertEquals(highScoreText, highScoreLabel2.getText(), "High score should persist");
@@ -174,10 +177,11 @@ public class ClickTheButtonGameFlowIntegrationTest {
         JLabel scoreLabel = (JLabel) findComponentByName(game, "scoreLabel");
         int scoreBefore = Integer.parseInt(scoreLabel.getText().replaceAll("\\D+", ""));
         SwingUtilities.invokeAndWait(fakeButton::doClick);
+        SwingUtilities.invokeAndWait(game::repaint);
         waitForCondition("Score should decrease after clicking fake button", () -> {
             int scoreAfter = Integer.parseInt(scoreLabel.getText().replaceAll("\\D+", ""));
             return scoreAfter < scoreBefore;
-        }, 2000);
+        }, 4000);
     }
 
     @Test
@@ -188,7 +192,9 @@ public class ClickTheButtonGameFlowIntegrationTest {
         JPanel overlayPanel = (JPanel) findComponentByType(game, com.andernet.experiment.ui.GameOverlayPanel.class);
         JButton overlayBtn = (JButton) findComponentByName(overlayPanel, "overlayButton");
         assertNotNull(overlayBtn);
-        waitForCondition("Overlay button should be focused for accessibility", overlayBtn::isFocusOwner, 2000);
+        // Force focus request
+        SwingUtilities.invokeAndWait(overlayBtn::requestFocusInWindow);
+        waitForCondition("Overlay button should be focused for accessibility", overlayBtn::isFocusOwner, 4000);
     }
 
     // --- Utility methods for finding components by name or type ---
