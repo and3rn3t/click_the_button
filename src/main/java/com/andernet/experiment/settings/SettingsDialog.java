@@ -56,7 +56,9 @@ public class SettingsDialog extends JDialog {
         gbc.gridwidth = 2;
         JPanel buttonPanel = new JPanel();
         JButton ok = new JButton("OK");
+        ok.setName("okButton");
         JButton cancel = new JButton("Cancel");
+        cancel.setName("cancelButton");
         buttonPanel.add(ok);
         buttonPanel.add(cancel);
         add(buttonPanel, gbc);

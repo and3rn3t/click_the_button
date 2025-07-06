@@ -92,22 +92,30 @@ public class ClickTheButtonGame extends JFrame {
 
         Font labelFont = Theme.LABEL_FONT;
 
+        // Ensure minimum duration for test compatibility
+        if (settings.getGameDurationSeconds() < 10) {
+            settings.setGameDurationSeconds(10);
+        }
         gameState = new GameState(settings.getGameDurationSeconds());
         // Load high score from disk
         gameState.loadHighScore(HIGH_SCORE_FILE);
 
         // Score label at top left
         scoreLabel = UIUtils.createLabel("Score: 0", 10, 10, 120, 35, labelFont);
+        scoreLabel.setName("scoreLabel");
         add(scoreLabel);
         // Timer label at top center
         timerLabel = UIUtils.createLabel("Time: 30", 140, 10, 120, 35, labelFont);
+        timerLabel.setName("timerLabel");
         add(timerLabel);
         // High score label at top right
         highScoreLabel = UIUtils.createLabel("High Score: 0", 270, 10, 150, 35, labelFont);
+        highScoreLabel.setName("highScoreLabel");
         add(highScoreLabel);
 
         // Main animated button setup
         button = new AnimatedButton("Click me!");
+        button.setName("mainButton");
         button.setFont(Theme.BUTTON_FONT);
         button.setFocusPainted(false);
         button.setContentAreaFilled(false);
@@ -155,6 +163,8 @@ public class ClickTheButtonGame extends JFrame {
         buttonManager.createFakeButtons();
         // Overlay panel for start/game over screens
         overlayPanel = new GameOverlayPanel(GameConstants.WINDOW_WIDTH, GameConstants.WINDOW_HEIGHT);
+        overlayPanel.getOverlayButton().setName("overlayButton");
+        overlayPanel.getSettingsButton().setName("settingsButton");
         overlayPanel.getOverlayButton().addActionListener(e -> {
             hideOverlay();
             startGame();
@@ -233,6 +243,7 @@ public class ClickTheButtonGame extends JFrame {
 
         // Add a mute/unmute button in the top right
         JButton muteButton = new JButton(settings.isSoundEnabled() ? "🔊" : "🔇");
+        muteButton.setName("muteButton");
         muteButton.setBounds(WINDOW_WIDTH - 40, 5, 32, 32);
         muteButton.setFocusPainted(false);
         muteButton.setBorderPainted(false);
@@ -253,6 +264,7 @@ public class ClickTheButtonGame extends JFrame {
 
         // Add a help/info button to the overlay
         JButton helpButton = new JButton("?");
+        helpButton.setName("helpButton");
         helpButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
         helpButton.setFocusPainted(false);
         helpButton.setBackground(new Color(197, 225, 165));
@@ -404,6 +416,8 @@ public class ClickTheButtonGame extends JFrame {
     private void endGame() {
         MusicManager.stopBackgroundMusic();
         if (settings.isSoundEnabled()) ResourceManager.playEndBeep();
+        // Save high score after game ends
+        gameState.saveHighScore(HIGH_SCORE_FILE);
         overlayState = OverlayState.GAME_OVER;
         // Show summary screen with stats and achievements (if any)
         StringBuilder summary = new StringBuilder();

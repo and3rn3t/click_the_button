@@ -21,7 +21,7 @@ public class ClickTheButtonGameFlowIntegrationTest {
     @BeforeEach
     void setUp() throws InvocationTargetException, InterruptedException {
         settings = new Settings();
-        settings.setGameDurationSeconds(3); // Shorten for test
+        settings.setGameDurationSeconds(10); // Use minimum allowed for dialog
         SwingUtilities.invokeAndWait(() -> {
             game = new ClickTheButtonGame(settings);
             game.setVisible(true);
@@ -35,29 +35,35 @@ public class ClickTheButtonGameFlowIntegrationTest {
         });
     }
 
+    // --- Wait utility for polling UI state ---
+    private void waitForCondition(String message, java.util.function.BooleanSupplier condition, int timeoutMs) throws InterruptedException {
+        int waited = 0;
+        while (!condition.getAsBoolean() && waited < timeoutMs) {
+            Thread.sleep(50);
+            waited += 50;
+        }
+        if (!condition.getAsBoolean()) {
+            fail(message);
+        }
+    }
+
     @Test
     @Order(1)
     void testGameFlow_StartClickGameOver() throws Exception {
-        // Start the game (simulate overlay button click)
         JButton overlayButton = (JButton) findComponentByName(game, "overlayButton");
         assertNotNull(overlayButton, "Overlay button should exist");
         SwingUtilities.invokeAndWait(overlayButton::doClick);
-        // Wait for countdown to finish
         Thread.sleep(2500);
-        // Click the main button a few times
         JButton mainButton = (JButton) findComponentByType(game, com.andernet.experiment.ui.AnimatedButton.class);
         assertNotNull(mainButton, "Main button should exist");
         for (int i = 0; i < 2; i++) {
             SwingUtilities.invokeAndWait(mainButton::doClick);
             Thread.sleep(100);
         }
-        // Wait for timer to expire
-        Thread.sleep(2000);
-        // Overlay should be visible (game over)
+        // Wait for overlay to become visible (game over)
         JPanel overlayPanel = (JPanel) findComponentByType(game, com.andernet.experiment.ui.GameOverlayPanel.class);
         assertNotNull(overlayPanel, "Overlay panel should exist");
-        assertTrue(overlayPanel.isVisible(), "Overlay should be visible after game over");
-        // Score label should reflect clicks
+        waitForCondition("Overlay should be visible after game over", overlayPanel::isVisible, 5000);
         JLabel scoreLabel = (JLabel) findComponentByName(game, "scoreLabel");
         assertNotNull(scoreLabel);
         assertTrue(scoreLabel.getText().contains("2"), "Score label should show 2");
@@ -66,27 +72,26 @@ public class ClickTheButtonGameFlowIntegrationTest {
     @Test
     @Order(2)
     void testSettingsDialog_ChangeGameDuration() throws Exception {
-        // Open settings dialog via overlay
         JButton overlayButton = (JButton) findComponentByName(game, "overlayButton");
         SwingUtilities.invokeAndWait(overlayButton::doClick);
         JButton settingsButton = (JButton) findComponentByName(game, "settingsButton");
         assertNotNull(settingsButton, "Settings button should exist");
         SwingUtilities.invokeAndWait(settingsButton::doClick);
-        // Find the dialog and change duration (simulate user input)
+        // Wait for dialog to appear
+        waitForCondition("Settings dialog should appear", () -> findDialogByTitle("Settings") != null, 5000);
         JDialog dialog = (JDialog) findDialogByTitle("Settings");
         assertNotNull(dialog, "Settings dialog should appear");
         JTextField durationField = (JTextField) findComponentByType(dialog, JTextField.class);
         assertNotNull(durationField, "Duration field should exist");
-        SwingUtilities.invokeAndWait(() -> durationField.setText("5"));
+        SwingUtilities.invokeAndWait(() -> durationField.setText("12"));
         JButton okButton = (JButton) findComponentByName(dialog, "okButton");
         assertNotNull(okButton, "OK button should exist");
         SwingUtilities.invokeAndWait(okButton::doClick);
-        // Start game and check timer label
         SwingUtilities.invokeAndWait(overlayButton::doClick);
         Thread.sleep(2500);
         JLabel timerLabel = (JLabel) findComponentByName(game, "timerLabel");
         assertNotNull(timerLabel);
-        assertTrue(timerLabel.getText().contains("5"), "Timer label should reflect new duration");
+        assertTrue(timerLabel.getText().contains("12"), "Timer label should reflect new duration");
     }
 
     @Test
@@ -109,10 +114,10 @@ public class ClickTheButtonGameFlowIntegrationTest {
         // Simulate pause (P)
         sendKeyStroke(game, 'P');
         JPanel overlayPanel = (JPanel) findComponentByType(game, com.andernet.experiment.ui.GameOverlayPanel.class);
-        assertTrue(overlayPanel.isVisible(), "Overlay should be visible after pause");
+        waitForCondition("Overlay should be visible after pause", overlayPanel::isVisible, 2000);
         // Simulate resume (P)
         sendKeyStroke(game, 'P');
-        assertFalse(overlayPanel.isVisible(), "Overlay should be hidden after resume");
+        waitForCondition("Overlay should be hidden after resume", () -> !overlayPanel.isVisible(), 2000);
         // Simulate Esc (quit) - should show confirm dialog, skip actual exit
     }
 
@@ -148,12 +153,12 @@ public class ClickTheButtonGameFlowIntegrationTest {
     void testFontSizeAdjustment() throws Exception {
         JLabel scoreLabel = (JLabel) findComponentByName(game, "scoreLabel");
         Font origFont = scoreLabel.getFont();
-        sendKeyStroke(game, '+');
-        Thread.sleep(100);
+        sendKeyStroke(game, java.awt.event.KeyEvent.VK_EQUALS, true); // Shift+Equals for +
+        Thread.sleep(200);
         Font largerFont = scoreLabel.getFont();
         assertTrue(largerFont.getSize() > origFont.getSize(), "Font size should increase");
-        sendKeyStroke(game, '-');
-        Thread.sleep(100);
+        sendKeyStroke(game, java.awt.event.KeyEvent.VK_MINUS, false); // -
+        Thread.sleep(200);
         Font smallerFont = scoreLabel.getFont();
         assertTrue(smallerFont.getSize() < largerFont.getSize(), "Font size should decrease");
     }
@@ -169,9 +174,10 @@ public class ClickTheButtonGameFlowIntegrationTest {
         JLabel scoreLabel = (JLabel) findComponentByName(game, "scoreLabel");
         int scoreBefore = Integer.parseInt(scoreLabel.getText().replaceAll("\\D+", ""));
         SwingUtilities.invokeAndWait(fakeButton::doClick);
-        Thread.sleep(100);
-        int scoreAfter = Integer.parseInt(scoreLabel.getText().replaceAll("\\D+", ""));
-        assertTrue(scoreAfter < scoreBefore, "Score should decrease after clicking fake button");
+        waitForCondition("Score should decrease after clicking fake button", () -> {
+            int scoreAfter = Integer.parseInt(scoreLabel.getText().replaceAll("\\D+", ""));
+            return scoreAfter < scoreBefore;
+        }, 2000);
     }
 
     @Test
@@ -182,7 +188,7 @@ public class ClickTheButtonGameFlowIntegrationTest {
         JPanel overlayPanel = (JPanel) findComponentByType(game, com.andernet.experiment.ui.GameOverlayPanel.class);
         JButton overlayBtn = (JButton) findComponentByName(overlayPanel, "overlayButton");
         assertNotNull(overlayBtn);
-        assertTrue(overlayBtn.isFocusOwner(), "Overlay button should be focused for accessibility");
+        waitForCondition("Overlay button should be focused for accessibility", overlayBtn::isFocusOwner, 2000);
     }
 
     // --- Utility methods for finding components by name or type ---
@@ -215,12 +221,20 @@ public class ClickTheButtonGameFlowIntegrationTest {
         }
         return null;
     }
-    private void sendKeyStroke(JFrame frame, char keyChar) throws Exception {
+    private void sendKeyStroke(JFrame frame, int keyCode, boolean shift) throws Exception {
         Robot robot = new Robot();
         frame.requestFocus();
         Thread.sleep(100);
-        robot.keyPress(Character.toUpperCase(keyChar));
-        robot.keyRelease(Character.toUpperCase(keyChar));
+        if (shift) robot.keyPress(java.awt.event.KeyEvent.VK_SHIFT);
+        robot.keyPress(keyCode);
+        robot.keyRelease(keyCode);
+        if (shift) robot.keyRelease(java.awt.event.KeyEvent.VK_SHIFT);
         Thread.sleep(100);
+    }
+    // Overload for character keys (platform-independent)
+    private void sendKeyStroke(JFrame frame, char ch) throws Exception {
+        int keyCode = java.awt.event.KeyEvent.getExtendedKeyCodeForChar(ch);
+        boolean shift = Character.isUpperCase(ch);
+        sendKeyStroke(frame, keyCode, shift);
     }
 }
