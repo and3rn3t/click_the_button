@@ -57,20 +57,14 @@ public class ClickTheButtonGame extends JFrame {
     /**
      * Constructs the game window and initializes all UI components and game state.
      */
-    public ClickTheButtonGame() {
-        // Show settings dialog before starting
-        SettingsDialog dialog = new SettingsDialog(this, settings);
-        dialog.setVisible(true);
-        if (!dialog.isConfirmed()) {
-            System.exit(0);
-        }
-        // Use settings for game configuration
+    public ClickTheButtonGame(Settings settings) {
+        this.settings = settings;
+        setUndecorated(true);
+        getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
         setTitle("Click the Button Game");
         setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
-        setUndecorated(true);
-        getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
         setLocationRelativeTo(null);
         setBackground(new Color(0,0,0,0));
         setContentPane(new JPanel() {
@@ -311,7 +305,16 @@ public class ClickTheButtonGame extends JFrame {
      */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            ClickTheButtonGame game = new ClickTheButtonGame();
+            // Show settings dialog before creating the game frame
+            Settings settings = new Settings();
+            JFrame dummy = new JFrame(); // Temporary invisible frame for dialog parenting
+            SettingsDialog dialog = new SettingsDialog(dummy, settings);
+            dialog.setVisible(true);
+            dummy.dispose();
+            if (!dialog.isConfirmed()) {
+                System.exit(0);
+            }
+            ClickTheButtonGame game = new ClickTheButtonGame(settings);
             game.setVisible(true);
         });
     }
