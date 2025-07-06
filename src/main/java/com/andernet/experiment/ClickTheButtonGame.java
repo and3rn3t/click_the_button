@@ -49,6 +49,8 @@ public class ClickTheButtonGame extends JFrame {
     private JLabel highScoreLabel;
     // Tracks game state (score, time, high score)
     private GameState gameState;
+    // Flag to prevent double processing of font size adjustments
+    private boolean fontAdjustmentInProgress = false;
     private OverlayState overlayState = OverlayState.START;
     private ButtonManager buttonManager;
     private Random random = new Random();
@@ -297,16 +299,10 @@ public class ClickTheButtonGame extends JFrame {
                     "How to Play", JOptionPane.INFORMATION_MESSAGE);
         });
         // Font size adjustment for accessibility
+        // Register font size adjustment keyboard actions only on the root pane
         getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, KeyEvent.SHIFT_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> adjustFontSize(-2), KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        // Also register on the main content pane for robustness
-        if (getContentPane() instanceof JComponent) {
-            JComponent content = (JComponent) getContentPane();
-            content.registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
-            content.registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, KeyEvent.SHIFT_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
-            content.registerKeyboardAction(e -> adjustFontSize(-2), KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        }
 
         // Make window resizable and adapt layout
         setResizable(true);
@@ -621,18 +617,49 @@ public class ClickTheButtonGame extends JFrame {
     // Add this method to the class:
     private void adjustFontSize(int delta) {
         System.out.println("[DEBUG] adjustFontSize called with delta=" + delta);
-        for (Component c : getContentPane().getComponents()) {
+        // Prevent double processing
+        if (fontAdjustmentInProgress) {
+            System.out.println("[DEBUG] Font adjustment already in progress, skipping");
+            return;
+        }
+        fontAdjustmentInProgress = true;
+        
+        try {
+            // Make sure we're on the EDT
+            if (!SwingUtilities.isEventDispatchThread()) {
+                SwingUtilities.invokeLater(() -> adjustFontSize(delta));
+                return;
+            }
+            
+            // Update all components recursively
+            adjustFontSizeRecursive(getContentPane(), delta);
+            
+            // Force repaint
+            revalidate();
+            repaint();
+            System.out.println("[DEBUG] adjustFontSize complete");
+        } finally {
+            fontAdjustmentInProgress = false;
+        }
+    }
+    
+    private void adjustFontSizeRecursive(Container container, int delta) {
+        for (Component c : container.getComponents()) {
             if (c instanceof JComponent) {
                 Font f = c.getFont();
                 if (f != null) {
-                    c.setFont(f.deriveFont((float)Math.max(10, f.getSize() + delta)));
+                    Font newFont = f.deriveFont((float)Math.max(10, f.getSize() + delta));
+                    System.out.println("[DEBUG] Adjusting font for " + c.getClass().getSimpleName() + 
+                                       " from " + f.getSize() + " to " + newFont.getSize());
+                    c.setFont(newFont);
                     flushComponentUI((JComponent)c);
                 }
             }
+            // Recursively handle containers
+            if (c instanceof Container) {
+                adjustFontSizeRecursive((Container)c, delta);
+            }
         }
-        revalidate();
-        repaint();
-        System.out.println("[DEBUG] adjustFontSize complete");
     }
 
     // Utility to robustly update and flush UI changes for a component
