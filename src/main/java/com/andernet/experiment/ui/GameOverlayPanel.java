@@ -6,6 +6,7 @@ import java.awt.*;
 public class GameOverlayPanel extends JPanel {
     private final JLabel overlayLabel;
     private final JButton overlayButton;
+    private final JButton settingsButton;
     private final JLabel instructions;
     public GameOverlayPanel(int width, int height) {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -35,6 +36,23 @@ public class GameOverlayPanel extends JPanel {
         overlayButton.setPreferredSize(new Dimension(200, 52));
         add(overlayButton);
         add(Box.createRigidArea(new Dimension(0, 24)));
+        // Add settings button below overlayButton
+        settingsButton = new JButton("Settings");
+        settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        settingsButton.setFocusPainted(false);
+        settingsButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        settingsButton.setBackground(new Color(120, 144, 156));
+        settingsButton.setForeground(Color.WHITE);
+        settingsButton.setBorder(BorderFactory.createEmptyBorder(8, 24, 8, 24));
+        settingsButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        settingsButton.setContentAreaFilled(true);
+        settingsButton.setOpaque(true);
+        settingsButton.setBorderPainted(false);
+        settingsButton.setFocusable(false);
+        settingsButton.setMaximumSize(new Dimension(160, 36));
+        settingsButton.setPreferredSize(new Dimension(140, 32));
+        add(settingsButton);
+        add(Box.createRigidArea(new Dimension(0, 24)));
         instructions = new JLabel("<html><div style='text-align:center;'>Click the blue button as many times as you can in 30 seconds!<br>Avoid the red fake buttons.</div></html>", SwingConstants.CENTER);
         instructions.setFont(new Font("Segoe UI", Font.PLAIN, 17));
         instructions.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -53,4 +71,5 @@ public class GameOverlayPanel extends JPanel {
     }
     public JLabel getOverlayLabel() { return overlayLabel; }
     public JButton getOverlayButton() { return overlayButton; }
+    public JButton getSettingsButton() { return settingsButton; }
 }

@@ -1,5 +1,7 @@
 package com.andernet.experiment.logic;
 
+import java.io.*;
+
 public class GameState {
     private int score = 0;
     private int highScore = 0;
@@ -25,4 +27,17 @@ public class GameState {
         timeLeft = initialTime;
     }
     public void decrementTime() { timeLeft--; }
+
+    public void saveHighScore(File file) {
+        try (PrintWriter out = new PrintWriter(new FileWriter(file))) {
+            out.println(highScore);
+        } catch (IOException ignored) {}
+    }
+    public void loadHighScore(File file) {
+        if (!file.exists()) return;
+        try (BufferedReader in = new BufferedReader(new FileReader(file))) {
+            String line = in.readLine();
+            if (line != null) highScore = Integer.parseInt(line.trim());
+        } catch (IOException | NumberFormatException ignored) {}
+    }
 }
