@@ -73,7 +73,6 @@ public class ClickTheButtonGame extends JFrame {
         getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
         setLocationRelativeTo(null);
         setBackground(new Color(0,0,0,0));
-        // Custom content pane with gradient background and rounded corners
         setContentPane(new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -152,6 +151,8 @@ public class ClickTheButtonGame extends JFrame {
         });
         overlayPanel.setVisible(true);
         getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
+        // Ensure game UI is hidden until game starts
+        setGameUIVisible(false);
         showOverlay("Click the Button Game", "Start Game", false);
 
         // Start the button move timer (moves every 1 second)
