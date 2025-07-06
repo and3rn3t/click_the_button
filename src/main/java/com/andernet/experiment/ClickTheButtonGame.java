@@ -40,7 +40,6 @@ public class ClickTheButtonGame extends JFrame {
     private Timer gameTimer;
     private JButton[] fakeButtons;
     private final int NUM_FAKE_BUTTONS = 2;
-    private Color[] funColors = {Color.RED, Color.GREEN, Color.BLUE, Color.ORANGE, Color.MAGENTA, Color.CYAN, Color.PINK, Color.YELLOW};
 
     public ClickTheButtonGame() {
         setTitle("Click the Button Game");
