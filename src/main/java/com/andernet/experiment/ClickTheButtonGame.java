@@ -55,11 +55,10 @@ public class ClickTheButtonGame extends JFrame {
     private Timer gameTimer;
     // Timer for moving buttons automatically
     private Timer moveTimer;
-    // Array of fake (obstacle) buttons
-    private FakeButton[] fakeButtons;
     // Overlay panel for start/game over screens
     private GameOverlayPanel overlayPanel;
-    private Settings settings = new Settings();
+    // Settings is always set in constructor, so no need for initializer
+    private Settings settings;
 
     // High score file path (single source of truth)
     private static final File HIGH_SCORE_FILE = new File(System.getProperty("user.home"), ".ctb_highscore");
@@ -152,7 +151,6 @@ public class ClickTheButtonGame extends JFrame {
         buttonManager = new ButtonManager(settings, gameState, scoreLabel, this::moveAllButtons, this::randomizeColors,
                 (JPanel) getContentPane());
         buttonManager.createFakeButtons();
-        fakeButtons = buttonManager.getFakeButtons();
         // Overlay panel for start/game over screens
         overlayPanel = new GameOverlayPanel(GameConstants.WINDOW_WIDTH, GameConstants.WINDOW_HEIGHT);
         overlayPanel.getOverlayButton().addActionListener(e -> {
@@ -220,7 +218,7 @@ public class ClickTheButtonGame extends JFrame {
         timerLabel.setToolTipText("Time left in the round");
         highScoreLabel.setToolTipText("Your all-time high score");
         button.setToolTipText("Click me to score points!");
-        for (FakeButton fake : fakeButtons) {
+        for (FakeButton fake : buttonManager.getFakeButtons()) {
             fake.setToolTipText("Don't click! These are fake buttons.");
         }
         overlayPanel.getOverlayButton().setToolTipText("Start or restart the game");
@@ -321,7 +319,7 @@ public class ClickTheButtonGame extends JFrame {
         timerLabel.setVisible(visible);
         highScoreLabel.setVisible(visible);
         button.setVisible(visible);
-        for (FakeButton fake : fakeButtons)
+        for (FakeButton fake : buttonManager.getFakeButtons())
             fake.setVisible(visible);
     }
 
@@ -333,7 +331,7 @@ public class ClickTheButtonGame extends JFrame {
         scoreLabel.setText("Score: 0");
         timerLabel.setText("Time: " + settings.getGameDurationSeconds());
         button.setEnabled(true);
-        for (FakeButton fake : fakeButtons)
+        for (FakeButton fake : buttonManager.getFakeButtons())
             fake.setEnabled(true);
         setGameUIVisible(true);
         overlayPanel.setVisible(false);
@@ -357,7 +355,7 @@ public class ClickTheButtonGame extends JFrame {
         gameTimer.stop();
         moveTimer.stop();
         button.setEnabled(false);
-        for (JButton fake : fakeButtons)
+        for (JButton fake : buttonManager.getFakeButtons())
             fake.setEnabled(false);
         gameState.saveHighScore(HIGH_SCORE_FILE);
         ResourceManager.playEndBeep();
@@ -394,7 +392,7 @@ public class ClickTheButtonGame extends JFrame {
         Color btn = UIUtils.getRandomPastelColor(random).darker();
         getContentPane().setBackground(bg);
         button.setBackground(btn);
-        for (FakeButton fake : fakeButtons) {
+        for (FakeButton fake : buttonManager.getFakeButtons()) {
             fake.setBackground(UIUtils.getRandomPastelColor(random).darker());
         }
     }
