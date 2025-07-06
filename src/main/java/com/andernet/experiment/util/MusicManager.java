@@ -12,7 +12,6 @@ public class MusicManager {
         try {
             URL url = MusicManager.class.getResource(resourcePath);
             if (url == null) {
-                System.err.println("[MusicManager] Audio resource not found: " + resourcePath);
                 return;
             }
             try (AudioInputStream audioIn = AudioSystem.getAudioInputStream(url)) {
@@ -25,18 +24,16 @@ public class MusicManager {
                 }
             }
         } catch (UnsupportedAudioFileException e) {
-            System.err.println("[MusicManager] Unsupported audio file: " + resourcePath);
+            // Silently ignore audio errors
         } catch (LineUnavailableException e) {
-            System.err.println("[MusicManager] Audio line unavailable: " + resourcePath);
+            // Silently ignore audio errors
         } catch (IOException e) {
-            System.err.println("[MusicManager] IO error playing audio: " + resourcePath);
+            // Silently ignore audio errors
         } catch (Exception e) {
-            // Suppress NullPointerException and other errors in test mode
             if (Boolean.getBoolean("ctb.testmode")) {
-                // Silently ignore in test mode
                 return;
             }
-            System.err.println("[MusicManager] Unexpected error: " + resourcePath);
+            // Silently ignore other errors
         }
     }
 

@@ -10,7 +10,6 @@ import com.andernet.experiment.ui.GameOverlayPanel;
 import com.andernet.experiment.ui.UIUtils;
 import com.andernet.experiment.logic.GameConstants;
 import com.andernet.experiment.logic.GameState;
-import com.andernet.experiment.logic.OverlayState;
 import com.andernet.experiment.logic.ButtonManager;
 import com.andernet.experiment.ui.Theme;
 import com.andernet.experiment.util.ResourceManager;
@@ -47,11 +46,8 @@ public class ClickTheButtonGame extends JFrame {
     private JLabel timerLabel;
     // Displays high score
     private JLabel highScoreLabel;
-    // Tracks game state (score, time, high score)
     private GameState gameState;
-    // Flag to prevent double processing of font size adjustments
     private boolean fontAdjustmentInProgress = false;
-    private OverlayState overlayState = OverlayState.START;
     private ButtonManager buttonManager;
     private Random random = new Random();
     private final int WINDOW_WIDTH = 400;
@@ -178,12 +174,9 @@ public class ClickTheButtonGame extends JFrame {
             SettingsDialog dialog = new SettingsDialog(parent, settings);
             dialog.setVisible(true);
             if (dialog.isConfirmed()) {
-                // Apply new settings (restart game state and UI as needed)
                 gameState = new GameState(settings.getGameDurationSeconds());
-                // Load high score after creating new GameState
                 gameState.loadHighScore(HIGH_SCORE_FILE);
-                System.out.println("[DEBUG] GameState recreated after settings dialog. High score: " + gameState.getHighScore());
-                timerLabel.setText("Time: " + settings.getGameDurationSeconds()); // Use new duration directly
+                timerLabel.setText("Time: " + settings.getGameDurationSeconds());
                 flushComponentUI(timerLabel);
                 scoreLabel.setText("Score: 0");
                 flushComponentUI(scoreLabel);
@@ -201,7 +194,6 @@ public class ClickTheButtonGame extends JFrame {
                 // Force timer label to use actual gameState value and flush
                 timerLabel.setText("Time: " + gameState.getTimeLeft());
                 flushComponentUI(timerLabel);
-                System.out.println("[DEBUG] SettingsDialog confirmed: duration=" + settings.getGameDurationSeconds() + ", timerLabel=" + timerLabel.getText());
             }
         });
         overlayPanel.setVisible(true);
@@ -349,7 +341,6 @@ public class ClickTheButtonGame extends JFrame {
      * @param showScore  Whether to show the score (unused, for future use)
      */
     private void showOverlay(String message, String buttonText, boolean showScore) {
-        System.out.println("[DEBUG] showOverlay called: message=" + message + ", buttonText=" + buttonText);
         overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;'>" + message + "</div></html>");
         overlayPanel.getOverlayButton().setText(buttonText);
         overlayPanel.getOverlayButton().setVisible(true);
@@ -359,7 +350,6 @@ public class ClickTheButtonGame extends JFrame {
         overlayPanel.setFocusable(true);
         overlayPanel.requestFocusInWindow();
         overlayPanel.requestFocus();
-        System.out.println("[DEBUG] overlayPanel.setVisible(true) called");
         overlayPanel.revalidate();
         overlayPanel.repaint();
         getLayeredPane().revalidate();
@@ -373,7 +363,6 @@ public class ClickTheButtonGame extends JFrame {
         setGameUIVisible(false);
         // Accessibility: focus overlay panel and then overlay button robustly
         JButton overlayBtn = overlayPanel.getOverlayButton();
-        System.out.println("[DEBUG][showOverlay] overlayBtn: visible=" + overlayBtn.isVisible() + ", enabled=" + overlayBtn.isEnabled() + ", focusable=" + overlayBtn.isFocusable() + ", showing=" + overlayBtn.isShowing() + ", bounds=" + overlayBtn.getBounds());
         overlayBtn.setFocusable(true);
         overlayBtn.setRequestFocusEnabled(true);
         overlayBtn.setEnabled(true);
@@ -381,13 +370,11 @@ public class ClickTheButtonGame extends JFrame {
         // Try to request focus multiple times with increasing delays
         for (int delay : new int[]{0, 100, 250, 500}) {
             new Timer(delay, ev -> {
-                System.out.println("[DEBUG][showOverlay][Timer] Before focus request: visible=" + overlayBtn.isVisible() + ", enabled=" + overlayBtn.isEnabled() + ", focusable=" + overlayBtn.isFocusable() + ", showing=" + overlayBtn.isShowing() + ", bounds=" + overlayBtn.getBounds());
                 overlayPanel.requestFocusInWindow();
                 KeyboardFocusManager.getCurrentKeyboardFocusManager().clearGlobalFocusOwner();
-                boolean focusResult = overlayBtn.requestFocusInWindow();
+                overlayBtn.requestFocusInWindow();
                 overlayBtn.requestFocus();
                 overlayBtn.grabFocus();
-                System.out.println("[DEBUG][showOverlay][Timer] After focus request: focusResult=" + focusResult + ", focusOwner=" + KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner());
                 ((Timer)ev.getSource()).stop();
             }).start();
         }
@@ -397,7 +384,6 @@ public class ClickTheButtonGame extends JFrame {
      * Hides the overlay panel and shows the main game UI.
      */
     private void hideOverlay() {
-        System.out.println("[DEBUG] hideOverlay called");
         overlayPanel.setVisible(false);
         overlayPanel.revalidate();
         overlayPanel.repaint();
@@ -412,7 +398,6 @@ public class ClickTheButtonGame extends JFrame {
      * @param visible true to show, false to hide
      */
     private void setGameUIVisible(boolean visible) {
-        System.out.println("[DEBUG] setGameUIVisible(" + visible + ") called");
         scoreLabel.setVisible(visible);
         timerLabel.setVisible(visible);
         highScoreLabel.setVisible(visible);
@@ -425,7 +410,6 @@ public class ClickTheButtonGame extends JFrame {
      * Starts or restarts the game, resetting state and timers.
      */
     private void startGame() {
-        System.out.println("[DEBUG] startGame called");
         if (settings.isSoundEnabled()) {
             MusicManager.playBackgroundMusic("/audio/background.wav", true);
         }
@@ -434,7 +418,6 @@ public class ClickTheButtonGame extends JFrame {
         overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>3</div></html>");
         overlayPanel.getOverlayButton().setVisible(false);
         overlayPanel.setVisible(true);
-        System.out.println("[DEBUG] overlayPanel.setVisible(true) for countdown");
         Timer countdown = new Timer(700, null);
         final int[] count = {3};
         countdown.addActionListener(e -> {
@@ -445,20 +428,15 @@ public class ClickTheButtonGame extends JFrame {
             } else {
                 countdown.stop();
                 overlayPanel.setVisible(false);
-                System.out.println("[DEBUG] overlayPanel.setVisible(false) after countdown");
                 setGameUIVisible(true);
                 gameState.reset(settings.getGameDurationSeconds());
-                System.out.println("[DEBUG] GameState.reset called. High score: " + gameState.getHighScore());
-                // Reload high score from file to ensure persistence
                 gameState.loadHighScore(HIGH_SCORE_FILE);
-                System.out.println("[DEBUG] GameState.loadHighScore called after reset. High score: " + gameState.getHighScore());
                 scoreLabel.setText("Score: 0");
-                timerLabel.setText("Time: " + gameState.getTimeLeft()); // Use actual time left
+                timerLabel.setText("Time: " + gameState.getTimeLeft());
                 highScoreLabel.setText("High Score: " + gameState.getHighScore());
                 button.setEnabled(true);
                 for (FakeButton fake : buttonManager.getFakeButtons())
                     fake.setEnabled(true);
-                overlayState = OverlayState.START;
                 gameTimer = new Timer(1000, ev -> {
                     gameState.decrementTime();
                     timerLabel.setText("Time: " + gameState.getTimeLeft());
@@ -478,7 +456,6 @@ public class ClickTheButtonGame extends JFrame {
      * Ends the game, disables input, and shows the game over overlay.
      */
     private void endGame() {
-        System.out.println("[DEBUG] endGame called");
         MusicManager.stopBackgroundMusic();
         if (settings.isSoundEnabled()) ResourceManager.playEndBeep();
         // Save high score after game ends
@@ -616,10 +593,7 @@ public class ClickTheButtonGame extends JFrame {
 
     // Add this method to the class:
     private void adjustFontSize(int delta) {
-        System.out.println("[DEBUG] adjustFontSize called with delta=" + delta);
-        // Prevent double processing
         if (fontAdjustmentInProgress) {
-            System.out.println("[DEBUG] Font adjustment already in progress, skipping");
             return;
         }
         fontAdjustmentInProgress = true;
@@ -637,7 +611,6 @@ public class ClickTheButtonGame extends JFrame {
             // Force repaint
             revalidate();
             repaint();
-            System.out.println("[DEBUG] adjustFontSize complete");
         } finally {
             fontAdjustmentInProgress = false;
         }
@@ -649,8 +622,6 @@ public class ClickTheButtonGame extends JFrame {
                 Font f = c.getFont();
                 if (f != null) {
                     Font newFont = f.deriveFont((float)Math.max(10, f.getSize() + delta));
-                    System.out.println("[DEBUG] Adjusting font for " + c.getClass().getSimpleName() + 
-                                       " from " + f.getSize() + " to " + newFont.getSize());
                     c.setFont(newFont);
                     flushComponentUI((JComponent)c);
                 }
@@ -681,7 +652,7 @@ public class ClickTheButtonGame extends JFrame {
             // Give the event queue a moment to process
             try { Thread.sleep(30); } catch (InterruptedException ignored) {}
         } catch (Exception e) {
-            System.err.println("[DEBUG] flushComponentUI exception: " + e);
+            // Ignore UI flush errors
         }
     }
 }

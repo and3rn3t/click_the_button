@@ -79,7 +79,6 @@ public class SettingsDialog extends JDialog {
         settings.setSoundEnabled(soundCheckBox.isSelected());
         settings.setMainButtonStartWidth((Integer) buttonWidthSpinner.getValue());
         settings.setMainButtonStartHeight((Integer) buttonHeightSpinner.getValue());
-        System.out.println("[DEBUG][SettingsDialog] applySettings: duration=" + settings.getGameDurationSeconds() + ", fakeButtons=" + settings.getNumFakeButtons() + ", moveInterval=" + settings.getMoveIntervalMs() + ", sound=" + settings.isSoundEnabled() + ", width=" + settings.getMainButtonStartWidth() + ", height=" + settings.getMainButtonStartHeight());
     }
 
     public boolean isConfirmed() {

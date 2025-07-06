@@ -1,7 +1,6 @@
 package com.andernet.experiment.logic;
 
 import java.io.*;
-import javax.swing.*;
 
 public class GameState {
     private int score = 0;
@@ -33,24 +32,21 @@ public class GameState {
     public void saveHighScore(File file) {
         try {
             java.nio.file.Files.write(file.toPath(), String.valueOf(highScore).getBytes());
-            System.out.println("[DEBUG] GameState.saveHighScore: file=" + file.getAbsolutePath() + ", value=" + highScore);
         } catch (Exception e) {
-            System.out.println("[DEBUG] GameState.saveHighScore: error: " + e);
+            // Ignore save errors
         }
     }
+
     public void loadHighScore(File file) {
         try {
             if (file.exists()) {
                 String content = new String(java.nio.file.Files.readAllBytes(file.toPath())).trim();
-                System.out.println("[DEBUG] GameState.loadHighScore: file=" + file.getAbsolutePath() + ", content=" + content);
                 int value = Integer.parseInt(content);
                 highScore = value;
             } else {
-                System.out.println("[DEBUG] GameState.loadHighScore: file does not exist: " + file.getAbsolutePath());
                 highScore = 0;
             }
         } catch (Exception e) {
-            System.out.println("[DEBUG] GameState.loadHighScore: error: " + e);
             highScore = 0;
         }
     }
