@@ -68,95 +68,55 @@ public class ClickTheButtonGame extends JFrame {
         Font mainFont = new Font("Segoe UI", Font.BOLD, 20);
         Font labelFont = new Font("Segoe UI", Font.BOLD, 16);
 
-        scoreLabel = new JLabel("Score: 0");
-        scoreLabel.setBounds(10, 10, 120, 35);
-        scoreLabel.setFont(labelFont);
-        scoreLabel.setOpaque(true);
-        scoreLabel.setBackground(new Color(255,255,255,180));
-        scoreLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2, true));
+        scoreLabel = createLabel("Score: 0", 10, 10, 120, 35, labelFont);
         add(scoreLabel);
-
-        timerLabel = new JLabel("Time: 30");
-        timerLabel.setBounds(140, 10, 120, 35);
-        timerLabel.setFont(labelFont);
-        timerLabel.setOpaque(true);
-        timerLabel.setBackground(new Color(255,255,255,180));
-        timerLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2, true));
+        timerLabel = createLabel("Time: 30", 140, 10, 120, 35, labelFont);
         add(timerLabel);
-
-        highScoreLabel = new JLabel("High Score: 0");
-        highScoreLabel.setBounds(270, 10, 150, 35);
-        highScoreLabel.setFont(labelFont);
-        highScoreLabel.setOpaque(true);
-        highScoreLabel.setBackground(new Color(255,255,255,180));
-        highScoreLabel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 2, true));
+        highScoreLabel = createLabel("High Score: 0", 270, 10, 150, 35, labelFont);
         add(highScoreLabel);
 
         button = new AnimatedButton("Click me!");
-        button.setFont(mainFont);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 22));
         button.setFocusPainted(false);
         button.setContentAreaFilled(false);
         button.setOpaque(false);
-        button.setBackground(new Color(100, 181, 246));
+        button.setBackground(new Color(33, 150, 243));
         button.setForeground(Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBounds((WINDOW_WIDTH-100)/2, (WINDOW_HEIGHT-50)/2, 100, 50);
-        button.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                score++;
-                if (score > highScore) {
-                    highScore = score;
-                    highScoreLabel.setText("High Score: " + highScore);
-                }
-                scoreLabel.setText("Score: " + score);
-                playClickSound();
-                nextLevel();
-                fadeMoveButton();
-                moveFakeButtons();
-                randomizeColors();
+        button.addActionListener(e -> {
+            score++;
+            if (score > highScore) {
+                highScore = score;
+                highScoreLabel.setText("High Score: " + highScore);
             }
+            scoreLabel.setText("Score: " + score);
+            playClickSound();
+            nextLevel();
+            moveAllButtons();
+            randomizeColors();
         });
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(new Color(33, 150, 243));
+                button.setBackground(new Color(33, 150, 243).darker());
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(new Color(100, 181, 246));
+                button.setBackground(new Color(33, 150, 243));
             }
         });
         add(button);
 
-        // Add fake buttons
         fakeButtons = new JButton[NUM_FAKE_BUTTONS];
         for (int i = 0; i < NUM_FAKE_BUTTONS; i++) {
-            fakeButtons[i] = new JButton("Fake!") {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    // Drop shadow
-                    g2.setColor(new Color(0,0,0,40));
-                    g2.fillRoundRect(4, 4, getWidth()-8, getHeight()-8, 30, 30);
-                    g2.setColor(getBackground());
-                    g2.fillRoundRect(0, 0, getWidth()-8, getHeight()-8, 30, 30);
-                    super.paintComponent(g2);
-                    g2.dispose();
-                }
-            };
-            fakeButtons[i].setFont(mainFont.deriveFont(Font.PLAIN, 18f));
-            fakeButtons[i].setFocusPainted(false);
-            fakeButtons[i].setContentAreaFilled(false);
-            fakeButtons[i].setOpaque(false);
-            fakeButtons[i].setBackground(new Color(244, 67, 54));
-            fakeButtons[i].setForeground(Color.WHITE);
-            fakeButtons[i].setBounds(0, 0, 80, 40);
+            fakeButtons[i] = createFakeButton(mainFont);
             fakeButtons[i].addActionListener(e -> {
                 score = Math.max(0, score - 2);
                 scoreLabel.setText("Score: " + score);
                 playFakeSound();
-                moveFakeButtons();
+                moveAllButtons();
                 randomizeColors();
             });
             add(fakeButtons[i]);
@@ -220,12 +180,52 @@ public class ClickTheButtonGame extends JFrame {
         showOverlay("Click the Button Game", "Start Game", false);
 
         // Start the button move timer (moves every 1 second)
-        moveTimer = new Timer(1000, e -> {
-            fadeMoveButton();
-            moveFakeButtons();
-        });
+        moveTimer = new Timer(1000, e -> moveAllButtons());
         moveTimer.setInitialDelay(1000);
         moveTimer.start();
+    }
+
+    // Helper to set up a label
+    private JLabel createLabel(String text, int x, int y, int width, int height, Font font) {
+        JLabel label = new JLabel(text);
+        label.setBounds(x, y, width, height);
+        label.setFont(font);
+        label.setOpaque(true);
+        label.setBackground(new Color(255,255,255,210));
+        label.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
+        return label;
+    }
+
+    // Helper to set up a fake button
+    private JButton createFakeButton(Font font) {
+        JButton fake = new JButton("Fake!") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(0,0,0,40));
+                g2.fillRoundRect(4, 4, getWidth()-8, getHeight()-8, 30, 30);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth()-8, getHeight()-8, 30, 30);
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
+        fake.setFont(font.deriveFont(Font.PLAIN, 18f));
+        fake.setFocusPainted(false);
+        fake.setContentAreaFilled(false);
+        fake.setOpaque(false);
+        fake.setBackground(new Color(244, 67, 54));
+        fake.setForeground(Color.WHITE);
+        fake.setBounds(0, 0, 80, 40);
+        fake.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return fake;
+    }
+
+    // Helper to move and randomize all buttons
+    private void moveAllButtons() {
+        fadeMoveButton();
+        moveFakeButtons();
     }
 
     private void showOverlay(String message, String buttonText, boolean showScore) {
@@ -353,12 +353,14 @@ public class ClickTheButtonGame extends JFrame {
         new Thread(() -> {
             try {
                 for (float a = 1.0f; a >= 0.1f; a -= 0.1f) {
-                    button.setAlpha(a);
+                    final float alpha = a;
+                    SwingUtilities.invokeLater(() -> button.setAlpha(alpha));
                     Thread.sleep(10);
                 }
-                moveButton();
+                SwingUtilities.invokeLater(this::moveButton);
                 for (float a = 0.1f; a <= 1.0f; a += 0.1f) {
-                    button.setAlpha(a);
+                    final float alpha = a;
+                    SwingUtilities.invokeLater(() -> button.setAlpha(alpha));
                     Thread.sleep(10);
                 }
             } catch (InterruptedException ignored) {}
