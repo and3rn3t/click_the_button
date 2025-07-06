@@ -2,6 +2,7 @@ package com.andernet.experiment.settings;
 
 import java.io.*;
 import java.util.Properties;
+import javax.swing.*;
 
 /**
  * SettingsPersistence handles saving and loading user settings to a properties file.
@@ -21,7 +22,9 @@ public class SettingsPersistence {
         try (FileOutputStream out = new FileOutputStream(SETTINGS_FILE)) {
             props.store(out, "ClickTheButtonGame User Settings");
         } catch (IOException e) {
-            // Optionally log or show error
+            System.err.println("[SettingsPersistence] Failed to save settings: " + SETTINGS_FILE);
+            e.printStackTrace();
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not save settings.", "File Error", JOptionPane.ERROR_MESSAGE));
         }
     }
 
@@ -45,7 +48,9 @@ public class SettingsPersistence {
                 settings.setMainButtonStartHeight(Integer.parseInt(props.getProperty("mainButtonStartHeight")));
             // Future: theme, etc.
         } catch (IOException | NumberFormatException e) {
-            // Optionally log or show error
+            System.err.println("[SettingsPersistence] Failed to load settings: " + SETTINGS_FILE);
+            e.printStackTrace();
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not load settings.", "File Error", JOptionPane.ERROR_MESSAGE));
         }
     }
 }

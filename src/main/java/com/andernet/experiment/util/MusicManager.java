@@ -9,10 +9,12 @@ public class MusicManager {
 
     public static void playBackgroundMusic(String resourcePath, boolean loop) {
         stopBackgroundMusic();
-        try {
+        try (AudioInputStream audioIn = AudioSystem.getAudioInputStream(MusicManager.class.getResource(resourcePath))) {
             URL url = MusicManager.class.getResource(resourcePath);
-            if (url == null) return;
-            AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
+            if (url == null) {
+                System.err.println("[MusicManager] Audio resource not found: " + resourcePath);
+                return;
+            }
             backgroundClip = AudioSystem.getClip();
             backgroundClip.open(audioIn);
             if (loop) {
@@ -20,8 +22,18 @@ public class MusicManager {
             } else {
                 backgroundClip.start();
             }
+        } catch (UnsupportedAudioFileException e) {
+            System.err.println("[MusicManager] Unsupported audio file: " + resourcePath);
+            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            System.err.println("[MusicManager] Audio line unavailable: " + resourcePath);
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.err.println("[MusicManager] IO error playing audio: " + resourcePath);
+            e.printStackTrace();
         } catch (Exception e) {
-            // Optionally log or ignore
+            System.err.println("[MusicManager] Unexpected error: " + resourcePath);
+            e.printStackTrace();
         }
     }
 

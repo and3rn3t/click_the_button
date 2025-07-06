@@ -508,6 +508,13 @@ public class ClickTheButtonGame extends JFrame {
      * Main entry point. Launches the game window.
      */
     public static void main(String[] args) {
+        // Global exception handler for uncaught exceptions
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null,
+                "An unexpected error occurred:\n" + e.toString(),
+                "Unexpected Error", JOptionPane.ERROR_MESSAGE));
+        });
         SwingUtilities.invokeLater(() -> {
             // Load settings from disk
             Settings settings = new Settings();

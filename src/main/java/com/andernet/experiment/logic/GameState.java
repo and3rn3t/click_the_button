@@ -1,6 +1,7 @@
 package com.andernet.experiment.logic;
 
 import java.io.*;
+import javax.swing.*;
 
 public class GameState {
     private int score = 0;
@@ -31,13 +32,21 @@ public class GameState {
     public void saveHighScore(File file) {
         try (PrintWriter out = new PrintWriter(new FileWriter(file))) {
             out.println(highScore);
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            System.err.println("[GameState] Failed to save high score: " + file.getAbsolutePath());
+            e.printStackTrace();
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not save high score.", "File Error", JOptionPane.ERROR_MESSAGE));
+        }
     }
     public void loadHighScore(File file) {
         if (!file.exists()) return;
         try (BufferedReader in = new BufferedReader(new FileReader(file))) {
             String line = in.readLine();
             if (line != null) highScore = Integer.parseInt(line.trim());
-        } catch (IOException | NumberFormatException ignored) {}
+        } catch (IOException | NumberFormatException e) {
+            System.err.println("[GameState] Failed to load high score: " + file.getAbsolutePath());
+            e.printStackTrace();
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not load high score.", "File Error", JOptionPane.ERROR_MESSAGE));
+        }
     }
 }
