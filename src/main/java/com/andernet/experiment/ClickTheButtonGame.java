@@ -14,6 +14,7 @@ import com.andernet.experiment.logic.OverlayState;
 import com.andernet.experiment.logic.ButtonManager;
 import com.andernet.experiment.ui.Theme;
 import com.andernet.experiment.util.ResourceManager;
+import com.andernet.experiment.util.MusicManager;
 import com.andernet.experiment.settings.Settings;
 import com.andernet.experiment.settings.SettingsDialog;
 import com.andernet.experiment.settings.SettingsPersistence;
@@ -124,7 +125,7 @@ public class ClickTheButtonGame extends JFrame {
             gameState.incrementScore();
             highScoreLabel.setText("High Score: " + gameState.getHighScore());
             scoreLabel.setText("Score: " + gameState.getScore());
-            ResourceManager.playBeep();
+            if (settings.isSoundEnabled()) ResourceManager.playBeep();
             nextLevel();
             moveAllButtons();
             randomizeColors();
@@ -242,6 +243,11 @@ public class ClickTheButtonGame extends JFrame {
         muteButton.addActionListener(e -> {
             settings.setSoundEnabled(!settings.isSoundEnabled());
             muteButton.setText(settings.isSoundEnabled() ? "🔊" : "🔇");
+            if (settings.isSoundEnabled()) {
+                MusicManager.playBackgroundMusic("/audio/background.wav", true);
+            } else {
+                MusicManager.stopBackgroundMusic();
+            }
         });
         add(muteButton);
 
@@ -291,6 +297,10 @@ public class ClickTheButtonGame extends JFrame {
                 }
             }
         });
+        // Start background music if sound is enabled
+        if (settings.isSoundEnabled()) {
+            MusicManager.playBackgroundMusic("/audio/background.wav", true);
+        }
     }
 
     /**
@@ -347,6 +357,9 @@ public class ClickTheButtonGame extends JFrame {
      * Starts or restarts the game, resetting state and timers.
      */
     private void startGame() {
+        if (settings.isSoundEnabled()) {
+            MusicManager.playBackgroundMusic("/audio/background.wav", true);
+        }
         // Countdown before game starts
         setGameUIVisible(false);
         overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>3</div></html>");
@@ -389,13 +402,8 @@ public class ClickTheButtonGame extends JFrame {
      * Ends the game, disables input, and shows the game over overlay.
      */
     private void endGame() {
-        gameTimer.stop();
-        moveTimer.stop();
-        button.setEnabled(false);
-        for (JButton fake : buttonManager.getFakeButtons())
-            fake.setEnabled(false);
-        gameState.saveHighScore(HIGH_SCORE_FILE);
-        ResourceManager.playEndBeep();
+        MusicManager.stopBackgroundMusic();
+        if (settings.isSoundEnabled()) ResourceManager.playEndBeep();
         overlayState = OverlayState.GAME_OVER;
         // Show summary screen with stats and achievements (if any)
         StringBuilder summary = new StringBuilder();

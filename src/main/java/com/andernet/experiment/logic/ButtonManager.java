@@ -36,7 +36,7 @@ public class ButtonManager {
             fakeButtons[i].addActionListener(e -> {
                 gameState.decrementScore(2);
                 scoreLabel.setText("Score: " + gameState.getScore());
-                ResourceManager.playFakeBeep();
+                if (settings.isSoundEnabled()) ResourceManager.playFakeBeep();
                 moveAllButtons.run();
                 randomizeColors.run();
             });

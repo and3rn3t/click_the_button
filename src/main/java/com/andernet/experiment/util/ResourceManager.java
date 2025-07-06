@@ -1,29 +1,28 @@
 package com.andernet.experiment.util;
 
-import java.awt.*;
+import javax.sound.sampled.*;
+import java.net.URL;
 
 public class ResourceManager {
-    // Placeholder for future image, sound, or other resource management
     public static void playBeep() {
-        Toolkit.getDefaultToolkit().beep();
+        playSound("/audio/click.wav");
     }
     public static void playFakeBeep() {
-        new Thread(() -> {
-            try {
-                Toolkit.getDefaultToolkit().beep();
-                Thread.sleep(50);
-                Toolkit.getDefaultToolkit().beep();
-            } catch (InterruptedException ignored) {}
-        }).start();
+        playSound("/audio/fake.wav");
     }
     public static void playEndBeep() {
+        playSound("/audio/gameover.wav");
+    }
+    public static void playSound(String resourcePath) {
         new Thread(() -> {
             try {
-                for (int i = 0; i < 3; i++) {
-                    Toolkit.getDefaultToolkit().beep();
-                    Thread.sleep(100);
-                }
-            } catch (InterruptedException ignored) {}
+                URL url = ResourceManager.class.getResource(resourcePath);
+                if (url == null) return;
+                AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
+                Clip clip = AudioSystem.getClip();
+                clip.open(audioIn);
+                clip.start();
+            } catch (Exception ignored) {}
         }).start();
     }
 }
