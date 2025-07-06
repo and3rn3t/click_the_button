@@ -16,6 +16,7 @@ import com.andernet.experiment.ui.Theme;
 import com.andernet.experiment.util.ResourceManager;
 import com.andernet.experiment.settings.Settings;
 import com.andernet.experiment.settings.SettingsDialog;
+import com.andernet.experiment.settings.SettingsPersistence;
 
 /**
  * ClickTheButtonGame is a modern, graphical Java Swing game where the player
@@ -173,6 +174,8 @@ public class ClickTheButtonGame extends JFrame {
                 moveTimer.setInitialDelay(settings.getMoveIntervalMs());
                 revalidate();
                 repaint();
+                // Save settings after dialog
+                SettingsPersistence.save(settings);
             }
         });
         overlayPanel.setVisible(true);
@@ -198,7 +201,10 @@ public class ClickTheButtonGame extends JFrame {
         }, KeyStroke.getKeyStroke("ENTER"), JComponent.WHEN_IN_FOCUSED_WINDOW);
         getRootPane().registerKeyboardAction(e -> {
             if (overlayPanel.isVisible()) {
-                System.exit(0);
+                int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to quit?", "Quit", JOptionPane.YES_NO_OPTION);
+                if (result == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
             }
         }, KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW);
         // Pause/resume with P key
@@ -254,23 +260,35 @@ public class ClickTheButtonGame extends JFrame {
             JOptionPane.showMessageDialog(this,
                     "Click the blue button as many times as you can before time runs out!\n" +
                             "Avoid the fake buttons—they subtract points.\n" +
-                            "You can change settings or mute sound using the buttons above.",
+                            "You can change settings or mute sound using the buttons above.\n\n" +
+                            "Keyboard Shortcuts:\n" +
+                            "  Enter: Start/Resume\n  Esc: Quit\n  P: Pause/Resume\n  +/-: Adjust font size\n  Tab: Navigate\n",
                     "How to Play", JOptionPane.INFORMATION_MESSAGE);
         });
+        // Font size adjustment for accessibility
+        getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> adjustFontSize(-2), KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
 
         // Make window resizable and adapt layout
         setResizable(true);
+        // Responsive layout: reposition/move main and fake buttons on resize
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
                 int w = getWidth();
                 int h = getHeight();
-                // Reposition labels and buttons proportionally
                 scoreLabel.setLocation((int) (w * 0.025), (int) (h * 0.025));
                 timerLabel.setLocation((int) (w * 0.35), (int) (h * 0.025));
                 highScoreLabel.setLocation((int) (w * 0.675), (int) (h * 0.025));
                 overlayPanel.setBounds(0, 0, w, h);
-                // Optionally, reposition/move main and fake buttons
+                // Reposition main button proportionally
+                button.setLocation((int) (w * 0.5 - button.getWidth() / 2), (int) (h * 0.5 - button.getHeight() / 2));
+                // Reposition fake buttons randomly within new bounds
+                for (FakeButton fake : buttonManager.getFakeButtons()) {
+                    int fx = (int) (Math.random() * (w - fake.getWidth()));
+                    int fy = (int) (Math.random() * (h - fake.getHeight() - 60) + 40);
+                    fake.setLocation(fx, fy);
+                }
             }
         });
     }
@@ -299,6 +317,8 @@ public class ClickTheButtonGame extends JFrame {
         setGameUIVisible(false);
         // Use overlayState for future logic (e.g., analytics, UI changes)
         // (No-op for now, but overlayState is now used)
+        // Accessibility: focus overlay button
+        SwingUtilities.invokeLater(() -> overlayPanel.getOverlayButton().requestFocusInWindow());
     }
 
     /**
@@ -327,25 +347,42 @@ public class ClickTheButtonGame extends JFrame {
      * Starts or restarts the game, resetting state and timers.
      */
     private void startGame() {
-        gameState.reset(settings.getGameDurationSeconds());
-        scoreLabel.setText("Score: 0");
-        timerLabel.setText("Time: " + settings.getGameDurationSeconds());
-        button.setEnabled(true);
-        for (FakeButton fake : buttonManager.getFakeButtons())
-            fake.setEnabled(true);
-        setGameUIVisible(true);
-        overlayPanel.setVisible(false);
-        overlayState = OverlayState.START;
-        gameTimer = new Timer(1000, e -> {
-            gameState.decrementTime();
-            timerLabel.setText("Time: " + gameState.getTimeLeft());
-            if (gameState.getTimeLeft() <= 0) {
-                endGame();
+        // Countdown before game starts
+        setGameUIVisible(false);
+        overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>3</div></html>");
+        overlayPanel.getOverlayButton().setVisible(false);
+        overlayPanel.setVisible(true);
+        Timer countdown = new Timer(700, null);
+        final int[] count = {3};
+        countdown.addActionListener(e -> {
+            count[0]--;
+            if (count[0] > 0) {
+                overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>"
+                        + count[0] + "</div></html>");
+            } else {
+                countdown.stop();
+                overlayPanel.setVisible(false);
+                setGameUIVisible(true);
+                gameState.reset(settings.getGameDurationSeconds());
+                scoreLabel.setText("Score: 0");
+                timerLabel.setText("Time: " + settings.getGameDurationSeconds());
+                button.setEnabled(true);
+                for (FakeButton fake : buttonManager.getFakeButtons())
+                    fake.setEnabled(true);
+                overlayState = OverlayState.START;
+                gameTimer = new Timer(1000, ev -> {
+                    gameState.decrementTime();
+                    timerLabel.setText("Time: " + gameState.getTimeLeft());
+                    if (gameState.getTimeLeft() <= 0) {
+                        endGame();
+                    }
+                });
+                gameTimer.start();
+                moveTimer.setDelay(settings.getMoveIntervalMs());
+                moveTimer.restart();
             }
         });
-        gameTimer.start();
-        moveTimer.setDelay(settings.getMoveIntervalMs());
-        moveTimer.restart();
+        countdown.start();
     }
 
     /**
@@ -360,7 +397,15 @@ public class ClickTheButtonGame extends JFrame {
         gameState.saveHighScore(HIGH_SCORE_FILE);
         ResourceManager.playEndBeep();
         overlayState = OverlayState.GAME_OVER;
-        showOverlay("Game Over!<br>Your score: " + gameState.getScore(), "Play Again", true);
+        // Show summary screen with stats and achievements (if any)
+        StringBuilder summary = new StringBuilder();
+        summary.append("Game Over!<br>Your score: ").append(gameState.getScore());
+        summary.append("<br>High score: ").append(gameState.getHighScore());
+        // Example achievement: 20+ points
+        if (gameState.getScore() >= 20) {
+            summary.append("<br><b>Achievement: Quick Clicker!</b>");
+        }
+        showOverlay(summary.toString(), "Play Again", true);
     }
 
     /**
@@ -386,6 +431,7 @@ public class ClickTheButtonGame extends JFrame {
 
     /**
      * Randomizes the background and button colors using pastel shades.
+     * Allows for future theme support.
      */
     private void randomizeColors() {
         Color bg = UIUtils.getRandomPastelColor(random);
@@ -455,8 +501,9 @@ public class ClickTheButtonGame extends JFrame {
      */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            // Show settings dialog before creating the game frame
+            // Load settings from disk
             Settings settings = new Settings();
+            SettingsPersistence.load(settings);
             JFrame dummy = new JFrame(); // Temporary invisible frame for dialog parenting
             SettingsDialog dialog = new SettingsDialog(dummy, settings);
             dialog.setVisible(true);
@@ -464,8 +511,24 @@ public class ClickTheButtonGame extends JFrame {
             if (!dialog.isConfirmed()) {
                 System.exit(0);
             }
+            // Save settings after dialog
+            SettingsPersistence.save(settings);
             ClickTheButtonGame game = new ClickTheButtonGame(settings);
             game.setVisible(true);
         });
+    }
+
+    // Add this method to the class:
+    private void adjustFontSize(int delta) {
+        for (Component c : getContentPane().getComponents()) {
+            if (c instanceof JComponent) {
+                Font f = c.getFont();
+                if (f != null) {
+                    c.setFont(f.deriveFont((float)Math.max(10, f.getSize() + delta)));
+                }
+            }
+        }
+        revalidate();
+        repaint();
     }
 }
