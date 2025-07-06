@@ -2,8 +2,6 @@ package com.andernet.experiment.settings;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
-import java.io.File;
-import java.util.Properties;
 
 class SettingsPersistenceTest {
     @Test

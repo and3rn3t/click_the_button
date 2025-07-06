@@ -1,12 +1,10 @@
 package com.andernet.experiment;
 
 import com.andernet.experiment.settings.Settings;
-import com.andernet.experiment.logic.GameState;
 import org.junit.jupiter.api.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.lang.reflect.InvocationTargetException;
 
 import static org.junit.jupiter.api.Assertions.*;
