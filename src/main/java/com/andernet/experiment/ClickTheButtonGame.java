@@ -8,6 +8,7 @@ import com.andernet.experiment.ui.AnimatedButton;
 import com.andernet.experiment.ui.FakeButton;
 import com.andernet.experiment.ui.GameOverlayPanel;
 import com.andernet.experiment.ui.UIUtils;
+import com.andernet.experiment.ui.ComponentFactory;
 import com.andernet.experiment.logic.GameConstants;
 import com.andernet.experiment.logic.GameState;
 import com.andernet.experiment.logic.ButtonManager;
@@ -54,8 +55,6 @@ public class ClickTheButtonGame extends JFrame {
     private boolean fontAdjustmentInProgress = false;
     private ButtonManager buttonManager;
     private Random random = new Random();
-    private final int WINDOW_WIDTH = 400;
-    private final int WINDOW_HEIGHT = 400;
     // Timer for game countdown
     private Timer gameTimer;
     // Timer for moving buttons automatically
@@ -92,7 +91,7 @@ public class ClickTheButtonGame extends JFrame {
         setUndecorated(true);
         getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
         setTitle(Constants.APP_TITLE);
-        setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        setSize(GameConstants.WINDOW_WIDTH, GameConstants.WINDOW_HEIGHT);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
         setLocationRelativeTo(null);
@@ -184,33 +183,11 @@ public class ClickTheButtonGame extends JFrame {
      * Create and configure the main game button
      */
     private void createMainButton() {
-        button = new AnimatedButton(Constants.CLICK_ME);
-        button.setName("mainButton");
-        button.setFont(Theme.BUTTON_FONT);
-        button.setFocusPainted(false);
-        button.setContentAreaFilled(false);
-        button.setOpaque(false);
-        button.setBackground(Theme.MAIN_BUTTON_COLOR);
-        button.setForeground(Color.WHITE);
-        button.setBorder(BorderFactory.createEmptyBorder(10, 30, 10, 30));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBounds((GameConstants.WINDOW_WIDTH - settings.getMainButtonStartWidth()) / 2,
-                (GameConstants.WINDOW_HEIGHT - settings.getMainButtonStartHeight()) / 2,
-                settings.getMainButtonStartWidth(), settings.getMainButtonStartHeight());
-        button.setToolTipText(Constants.MAIN_BUTTON_TOOLTIP);
+        button = ComponentFactory.createMainButton(Constants.CLICK_ME, 
+            settings.getMainButtonStartWidth(), settings.getMainButtonStartHeight());
         
-        // Event handler will be set after initialization
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(Theme.MAIN_BUTTON_COLOR.darker());
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(Theme.MAIN_BUTTON_COLOR);
-            }
-        });
+        // Add hover effect
+        ComponentFactory.addHoverEffect(button, Theme.MAIN_BUTTON_COLOR);
         add(button);
     }
     
@@ -252,15 +229,7 @@ public class ClickTheButtonGame extends JFrame {
      * Create mute/unmute button
      */
     private void createMuteButton() {
-        JButton muteButton = new JButton(settings.isSoundEnabled() ? Constants.SOUND_ON : Constants.SOUND_OFF);
-        muteButton.setName("muteButton");
-        muteButton.setBounds(WINDOW_WIDTH - 40, 5, 32, 32);
-        muteButton.setFocusPainted(false);
-        muteButton.setBorderPainted(false);
-        muteButton.setContentAreaFilled(false);
-        muteButton.setOpaque(false);
-        muteButton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
-        muteButton.setToolTipText(Constants.MUTE_BUTTON_TOOLTIP);
+        JButton muteButton = ComponentFactory.createMuteButton(settings.isSoundEnabled());
         muteButton.addActionListener(e -> {
             settings.setSoundEnabled(!settings.isSoundEnabled());
             muteButton.setText(settings.isSoundEnabled() ? Constants.SOUND_ON : Constants.SOUND_OFF);
@@ -277,15 +246,7 @@ public class ClickTheButtonGame extends JFrame {
      * Create help button
      */
     private void createHelpButton() {
-        JButton helpButton = new JButton(Constants.HELP);
-        helpButton.setName("helpButton");
-        helpButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        helpButton.setFocusPainted(false);
-        helpButton.setBackground(new Color(197, 225, 165));
-        helpButton.setForeground(new Color(33, 33, 33));
-        helpButton.setBorder(BorderFactory.createEmptyBorder(6, 16, 6, 16));
-        helpButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        helpButton.setToolTipText(Constants.HELP_BUTTON_TOOLTIP);
+        JButton helpButton = ComponentFactory.createHelpButton();
         helpButton.setBounds(10, 10, 40, 36);
         add(helpButton);
         helpButton.addActionListener(e -> {
@@ -382,24 +343,43 @@ public class ClickTheButtonGame extends JFrame {
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
-                int w = getWidth();
-                int h = getHeight();
-                UIUtils.positionResponsively(scoreLabel, GameConstants.LABEL_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
-                UIUtils.positionResponsively(timerLabel, GameConstants.TIMER_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
-                UIUtils.positionResponsively(highScoreLabel, GameConstants.HIGHSCORE_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
-                overlayPanel.setBounds(0, 0, w, h);
-                
-                // Reposition main button proportionally
-                button.setLocation((int) (w * 0.5 - button.getWidth() / 2), (int) (h * 0.5 - button.getHeight() / 2));
-                
-                // Reposition fake buttons randomly within new bounds
-                for (FakeButton fake : buttonManager.getFakeButtons()) {
-                    int fx = (int) (Math.random() * (w - fake.getWidth()));
-                    int fy = (int) (Math.random() * (h - fake.getHeight() - GameConstants.FAKE_BUTTON_MARGIN_BOTTOM) + GameConstants.FAKE_BUTTON_MARGIN_TOP);
-                    fake.setLocation(fx, fy);
-                }
+                handleWindowResize();
             }
         });
+    }
+    
+    /**
+     * Handles window resize events by repositioning components
+     */
+    private void handleWindowResize() {
+        int w = getWidth();
+        int h = getHeight();
+        
+        // Reposition labels
+        UIUtils.positionResponsively(scoreLabel, GameConstants.LABEL_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
+        UIUtils.positionResponsively(timerLabel, GameConstants.TIMER_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
+        UIUtils.positionResponsively(highScoreLabel, GameConstants.HIGHSCORE_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
+        
+        // Reposition overlay panel
+        overlayPanel.setBounds(0, 0, w, h);
+        
+        // Reposition main button proportionally
+        button.setLocation((int) (w * GameConstants.MAIN_BUTTON_CENTER_X_RATIO - button.getWidth() / 2), 
+                         (int) (h * GameConstants.MAIN_BUTTON_CENTER_Y_RATIO - button.getHeight() / 2));
+        
+        // Reposition fake buttons randomly within new bounds
+        repositionFakeButtons(w, h);
+    }
+    
+    /**
+     * Repositions fake buttons within window bounds
+     */
+    private void repositionFakeButtons(int windowWidth, int windowHeight) {
+        for (FakeButton fake : buttonManager.getFakeButtons()) {
+            int fx = (int) (Math.random() * (windowWidth - fake.getWidth()));
+            int fy = (int) (Math.random() * (windowHeight - fake.getHeight() - GameConstants.FAKE_BUTTON_MARGIN_BOTTOM) + GameConstants.FAKE_BUTTON_MARGIN_TOP);
+            fake.setLocation(fx, fy);
+        }
     }
     
     /**

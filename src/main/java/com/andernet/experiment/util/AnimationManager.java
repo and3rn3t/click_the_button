@@ -93,11 +93,10 @@ public class AnimationManager {
      * Shows a floating score label that moves up and fades out
      */
     public static void showFloatingScore(Container parent, int value, int x, int y) {
-        JLabel floatingLabel = new JLabel((value > 0 ? "+" : "") + value);
-        floatingLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        JLabel floatingLabel = LabelPool.getLabel();
+        floatingLabel.setText((value > 0 ? "+" : "") + value);
         floatingLabel.setForeground(value > 0 ? Color.GREEN : Color.RED);
         floatingLabel.setBounds(x - 15, y - 20, 50, 30);
-        floatingLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
         parent.add(floatingLabel, 0); // Add to front
         parent.repaint();
@@ -128,6 +127,8 @@ public class AnimationManager {
                 floatTimer.stop();
                 parent.remove(floatingLabel);
                 parent.repaint();
+                // Return label to pool for reuse
+                LabelPool.returnLabel(floatingLabel);
             }
         });
         floatTimer.start();

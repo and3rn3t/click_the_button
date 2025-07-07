@@ -3,6 +3,7 @@ package com.andernet.experiment.settings;
 import javax.swing.*;
 import java.awt.*;
 import com.andernet.experiment.util.Constants;
+import com.andernet.experiment.ui.ComponentFactory;
 
 /**
  * SettingsDialog allows the user to customize gameplay options before starting the game.
@@ -63,10 +64,8 @@ public class SettingsDialog extends JDialog {
         gbc.gridwidth = 2;
         
         JPanel buttonPanel = new JPanel();
-        JButton ok = new JButton(Constants.OK);
-        ok.setName("okButton");
-        JButton cancel = new JButton(Constants.CANCEL);
-        cancel.setName("cancelButton");
+        JButton ok = ComponentFactory.createDialogButton(Constants.OK, "okButton");
+        JButton cancel = ComponentFactory.createDialogButton(Constants.CANCEL, "cancelButton");
         buttonPanel.add(ok);
         buttonPanel.add(cancel);
         add(buttonPanel, gbc);

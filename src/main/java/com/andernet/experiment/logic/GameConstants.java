@@ -24,6 +24,12 @@ public class GameConstants {
     public static final int FAKE_BUTTON_MARGIN_TOP = 40;
     public static final int FAKE_BUTTON_MARGIN_BOTTOM = 60;
     
+    // Button positioning ratios
+    public static final double FAKE_BUTTON_WIDTH_RATIO = 0.8;
+    public static final double FAKE_BUTTON_HEIGHT_RATIO = 0.7;
+    public static final double MAIN_BUTTON_CENTER_X_RATIO = 0.5;
+    public static final double MAIN_BUTTON_CENTER_Y_RATIO = 0.5;
+    
     // Animation and timing
     public static final int COUNTDOWN_TIMER_DELAY = 700;
     public static final int GAME_TIMER_DELAY = 1000;

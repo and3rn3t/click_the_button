@@ -49,8 +49,8 @@ public class ButtonManager {
 
     public void moveFakeButtons() {
         for (FakeButton fake : fakeButtons) {
-            int x = (int) (parent.getWidth() * Math.random() * 0.8);
-            int y = (int) (parent.getHeight() * Math.random() * 0.7 + GameConstants.FAKE_BUTTON_MARGIN_TOP);
+            int x = (int) (parent.getWidth() * Math.random() * GameConstants.FAKE_BUTTON_WIDTH_RATIO);
+            int y = (int) (parent.getHeight() * Math.random() * GameConstants.FAKE_BUTTON_HEIGHT_RATIO + GameConstants.FAKE_BUTTON_MARGIN_TOP);
             fake.setLocation(x, y);
         }
     }
