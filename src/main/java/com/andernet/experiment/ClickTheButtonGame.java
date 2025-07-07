@@ -9,6 +9,7 @@ import com.andernet.experiment.ui.FakeButton;
 import com.andernet.experiment.ui.GameOverlayPanel;
 import com.andernet.experiment.ui.UIUtils;
 import com.andernet.experiment.ui.ComponentFactory;
+import com.andernet.experiment.ui.ModernPanel;
 import com.andernet.experiment.logic.GameConstants;
 import com.andernet.experiment.logic.GameState;
 import com.andernet.experiment.logic.ButtonManager;
@@ -99,11 +100,25 @@ public class ClickTheButtonGame extends JFrame {
         setContentPane(new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                GradientPaint gp = new GradientPaint(0, 0, Theme.BACKGROUND_GRADIENT_TOP, 0, getHeight(),
-                        Theme.BACKGROUND_GRADIENT_BOTTOM);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                
+                // Modern gradient background
+                GradientPaint gp = new GradientPaint(0, 0, Theme.BACKGROUND_GRADIENT_TOP, 
+                                                    0, getHeight(), Theme.BACKGROUND_GRADIENT_BOTTOM);
                 g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), GameConstants.BUTTON_RADIUS, GameConstants.BUTTON_RADIUS);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                
+                // Add subtle texture overlay
+                g2.setColor(new Color(255, 255, 255, 10));
+                for (int x = 0; x < getWidth(); x += 60) {
+                    for (int y = 0; y < getHeight(); y += 60) {
+                        g2.fillOval(x, y, 2, 2);
+                    }
+                }
+                
+                g2.dispose();
             }
         });
         getContentPane().setLayout(null);
@@ -158,25 +173,35 @@ public class ClickTheButtonGame extends JFrame {
     }
     
     /**
-     * Create score, timer, and high score labels
+     * Create score, timer, and high score labels with modern styling
      */
     private void createLabels() {
         Font labelFont = Theme.LABEL_FONT;
         
-        scoreLabel = UIUtils.createLabel(Constants.SCORE_PREFIX + "0", 10, 10, 120, 35, labelFont);
-        scoreLabel.setName("scoreLabel");
-        scoreLabel.setToolTipText(Constants.SCORE_TOOLTIP);
-        add(scoreLabel);
+        // Create modern info panels instead of basic labels
+        ModernPanel scorePanel = UIUtils.createInfoPanel(Constants.SCORE_PREFIX + "0", 10, 10, 120, 35, labelFont);
+        scorePanel.setName("scorePanel");
+        scorePanel.setToolTipText(Constants.SCORE_TOOLTIP);
+        add(scorePanel);
         
-        timerLabel = UIUtils.createLabel(Constants.TIME_PREFIX + settings.getGameDurationSeconds(), 140, 10, 120, 35, labelFont);
-        timerLabel.setName("timerLabel");
-        timerLabel.setToolTipText(Constants.TIMER_TOOLTIP);
-        add(timerLabel);
+        // Extract the label from the panel for score updates
+        scoreLabel = (JLabel) scorePanel.getComponent(0);
         
-        highScoreLabel = UIUtils.createLabel(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore(), 270, 10, 150, 35, labelFont);
-        highScoreLabel.setName("highScoreLabel");
-        highScoreLabel.setToolTipText(Constants.HIGH_SCORE_TOOLTIP);
-        add(highScoreLabel);
+        ModernPanel timerPanel = UIUtils.createInfoPanel(Constants.TIME_PREFIX + settings.getGameDurationSeconds(), 140, 10, 120, 35, labelFont);
+        timerPanel.setName("timerPanel");
+        timerPanel.setToolTipText(Constants.TIMER_TOOLTIP);
+        add(timerPanel);
+        
+        // Extract the label from the panel for timer updates
+        timerLabel = (JLabel) timerPanel.getComponent(0);
+        
+        ModernPanel highScorePanel = UIUtils.createInfoPanel(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore(), 270, 10, 150, 35, labelFont);
+        highScorePanel.setName("highScorePanel");
+        highScorePanel.setToolTipText(Constants.HIGH_SCORE_TOOLTIP);
+        add(highScorePanel);
+        
+        // Extract the label from the panel for high score updates
+        highScoreLabel = (JLabel) highScorePanel.getComponent(0);
     }
     
     /**
