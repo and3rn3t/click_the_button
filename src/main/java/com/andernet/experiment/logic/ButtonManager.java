@@ -1,9 +1,9 @@
 package com.andernet.experiment.logic;
 
 import com.andernet.experiment.ui.FakeButton;
-import com.andernet.experiment.util.ResourceManager;
 import com.andernet.experiment.util.Constants;
 import com.andernet.experiment.settings.Settings;
+import com.andernet.experiment.handlers.FakeButtonClickHandler;
 import javax.swing.*;
 
 /**
@@ -34,13 +34,14 @@ public class ButtonManager {
         fakeButtons = new FakeButton[settings.getNumFakeButtons()];
         for (int i = 0; i < settings.getNumFakeButtons(); i++) {
             fakeButtons[i] = new FakeButton(Constants.FAKE);
-            fakeButtons[i].addActionListener(e -> {
-                gameState.decrementScore(GameConstants.FAKE_BUTTON_PENALTY);
-                scoreLabel.setText(Constants.SCORE_PREFIX + gameState.getScore());
-                if (settings.isSoundEnabled()) ResourceManager.playFakeBeep();
-                moveAllButtons.run();
-                randomizeColors.run();
-            });
+            
+            // Create handler for each fake button
+            FakeButtonClickHandler handler = new FakeButtonClickHandler(
+                gameState, settings, scoreLabel, fakeButtons[i],
+                moveAllButtons, randomizeColors
+            );
+            fakeButtons[i].addActionListener(handler);
+            
             fakeButtons[i].setToolTipText(Constants.FAKE_BUTTON_TOOLTIP);
             parent.add(fakeButtons[i]);
         }

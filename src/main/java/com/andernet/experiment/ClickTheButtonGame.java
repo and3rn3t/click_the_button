@@ -18,6 +18,9 @@ import com.andernet.experiment.util.Constants;
 import com.andernet.experiment.settings.Settings;
 import com.andernet.experiment.settings.SettingsDialog;
 import com.andernet.experiment.settings.SettingsPersistence;
+import com.andernet.experiment.util.AnimationManager;
+import com.andernet.experiment.handlers.MainButtonClickHandler;
+import com.andernet.experiment.handlers.SettingsButtonClickHandler;
 import java.awt.event.KeyEvent;
 
 /**
@@ -61,6 +64,10 @@ public class ClickTheButtonGame extends JFrame {
     private GameOverlayPanel overlayPanel;
     // Settings is always set in constructor, so no need for initializer
     private Settings settings;
+
+    // Event handlers
+    private MainButtonClickHandler mainButtonClickHandler;
+    private SettingsButtonClickHandler settingsButtonClickHandler;
 
     // High score file path (single source of truth)
     private static final File HIGH_SCORE_FILE = new File(System.getProperty("user.home"), ".ctb_highscore");
@@ -117,6 +124,27 @@ public class ClickTheButtonGame extends JFrame {
     }
     
     /**
+     * Initialize event handlers
+     */
+    private void initializeEventHandlers() {
+        mainButtonClickHandler = new MainButtonClickHandler(
+            gameState, settings, scoreLabel, highScoreLabel, button,
+            this::moveAllButtons, this::randomizeColors, this::nextLevel
+        );
+        
+        settingsButtonClickHandler = new SettingsButtonClickHandler(
+            this, settings, gameState, HIGH_SCORE_FILE,
+            timerLabel, scoreLabel, highScoreLabel,
+            () -> buttonManager.createFakeButtons(),
+            moveTimer
+        );
+        
+        // Set the event handlers on the components
+        button.addActionListener(mainButtonClickHandler);
+        overlayPanel.getSettingsButton().addActionListener(settingsButtonClickHandler);
+    }
+    
+    /**
      * Create all UI components
      */
     private void createUIComponents() {
@@ -125,6 +153,9 @@ public class ClickTheButtonGame extends JFrame {
         createFakeButtons();
         createOverlayPanel();
         createControlButtons();
+        
+        // Initialize event handlers after UI components are created
+        initializeEventHandlers();
     }
     
     /**
@@ -168,7 +199,7 @@ public class ClickTheButtonGame extends JFrame {
                 settings.getMainButtonStartWidth(), settings.getMainButtonStartHeight());
         button.setToolTipText(Constants.MAIN_BUTTON_TOOLTIP);
         
-        button.addActionListener(e -> handleMainButtonClick());
+        // Event handler will be set after initialization
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -181,28 +212,6 @@ public class ClickTheButtonGame extends JFrame {
             }
         });
         add(button);
-    }
-    
-    /**
-     * Handle main button click action
-     */
-    private void handleMainButtonClick() {
-        gameState.incrementScore();
-        highScoreLabel.setText(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore());
-        scoreLabel.setText(Constants.SCORE_PREFIX + gameState.getScore());
-        if (settings.isSoundEnabled()) ResourceManager.playBeep();
-        nextLevel();
-        moveAllButtons();
-        randomizeColors();
-        
-        // Quick highlight effect
-        Color orig = button.getBackground();
-        button.setBackground(orig.brighter());
-        Timer t = new Timer(GameConstants.BUTTON_HIGHLIGHT_DURATION, ev -> button.setBackground(orig));
-        t.setRepeats(false);
-        t.start();
-        
-        showFloatingScore(GameConstants.MAIN_BUTTON_SCORE, button.getX() + button.getWidth() / 2, button.getY());
     }
     
     /**
@@ -226,38 +235,9 @@ public class ClickTheButtonGame extends JFrame {
             startGame();
         });
         
-        // Settings button on overlay opens settings dialog
-        overlayPanel.getSettingsButton().addActionListener(e -> handleSettingsButtonClick());
+        // Settings button handler will be set after initialization
         overlayPanel.setVisible(true);
         getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
-    }
-    
-    /**
-     * Handle settings button click
-     */
-    private void handleSettingsButtonClick() {
-        JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
-        SettingsDialog dialog = new SettingsDialog(parent, settings);
-        dialog.setVisible(true);
-        if (dialog.isConfirmed()) {
-            gameState = new GameState(settings.getGameDurationSeconds());
-            gameState.loadHighScore(HIGH_SCORE_FILE);
-            timerLabel.setText(Constants.TIME_PREFIX + settings.getGameDurationSeconds());
-            flushComponentUI(timerLabel);
-            scoreLabel.setText(Constants.SCORE_PREFIX + "0");
-            flushComponentUI(scoreLabel);
-            highScoreLabel.setText(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore());
-            flushComponentUI(highScoreLabel);
-            buttonManager.createFakeButtons();
-            moveTimer.setDelay(settings.getMoveIntervalMs());
-            moveTimer.setInitialDelay(settings.getMoveIntervalMs());
-            revalidate();
-            repaint();
-            SettingsPersistence.save(settings);
-            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
-            timerLabel.setText(Constants.TIME_PREFIX + gameState.getTimeLeft());
-            flushComponentUI(timerLabel);
-        }
     }
     
     /**
@@ -446,7 +426,7 @@ public class ClickTheButtonGame extends JFrame {
      */
     // Helper to move and randomize all buttons
     private void moveAllButtons() {
-        fadeMoveButton();
+        AnimationManager.fadeAndMoveButton(button, null);
         buttonManager.moveFakeButtons();
     }
 
@@ -532,41 +512,33 @@ public class ClickTheButtonGame extends JFrame {
         }
         // Countdown before game starts
         setGameUIVisible(false);
-        overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>3</div></html>");
         overlayPanel.getOverlayButton().setVisible(false);
         overlayPanel.setVisible(true);
-        Timer countdown = new Timer(700, null);
-        final int[] count = {3};
-        countdown.addActionListener(e -> {
-            count[0]--;
-            if (count[0] > 0) {
-                overlayPanel.getOverlayLabel().setText("<html><div style='text-align:center;font-size:36px;'>"
-                        + count[0] + "</div></html>");
-            } else {
-                countdown.stop();
-                overlayPanel.setVisible(false);
-                setGameUIVisible(true);
-                gameState.reset(settings.getGameDurationSeconds());
-                gameState.loadHighScore(HIGH_SCORE_FILE);
-                scoreLabel.setText("Score: 0");
-                timerLabel.setText("Time: " + gameState.getTimeLeft());
-                highScoreLabel.setText("High Score: " + gameState.getHighScore());
-                button.setEnabled(true);
-                for (FakeButton fake : buttonManager.getFakeButtons())
-                    fake.setEnabled(true);
-                gameTimer = new Timer(1000, ev -> {
-                    gameState.decrementTime();
-                    timerLabel.setText("Time: " + gameState.getTimeLeft());
-                    if (gameState.getTimeLeft() <= 0) {
-                        endGame();
-                    }
-                });
-                gameTimer.start();
-                moveTimer.setDelay(settings.getMoveIntervalMs());
-                moveTimer.restart();
-            }
+        
+        // Use AnimationManager for countdown
+        AnimationManager.animateCountdown(overlayPanel.getOverlayLabel(), () -> {
+            // Game starts after countdown
+            overlayPanel.setVisible(false);
+            setGameUIVisible(true);
+            gameState.reset(settings.getGameDurationSeconds());
+            gameState.loadHighScore(HIGH_SCORE_FILE);
+            scoreLabel.setText(Constants.SCORE_PREFIX + "0");
+            timerLabel.setText(Constants.TIME_PREFIX + gameState.getTimeLeft());
+            highScoreLabel.setText(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore());
+            button.setEnabled(true);
+            for (FakeButton fake : buttonManager.getFakeButtons())
+                fake.setEnabled(true);
+            gameTimer = new Timer(1000, ev -> {
+                gameState.decrementTime();
+                timerLabel.setText(Constants.TIME_PREFIX + gameState.getTimeLeft());
+                if (gameState.getTimeLeft() <= 0) {
+                    endGame();
+                }
+            });
+            gameTimer.start();
+            moveTimer.setDelay(settings.getMoveIntervalMs());
+            moveTimer.restart();
         });
-        countdown.start();
     }
 
     /**
@@ -575,11 +547,16 @@ public class ClickTheButtonGame extends JFrame {
     private void endGame() {
         MusicManager.stopBackgroundMusic();
         if (settings.isSoundEnabled()) ResourceManager.playEndBeep();
+        
+        // Update score label to show final score
+        scoreLabel.setText(Constants.SCORE_PREFIX + gameState.getScore());
+        
         // Save high score after game ends
         gameState.saveHighScore(HIGH_SCORE_FILE);
         // Immediately reload and update label to ensure persistence in test
         gameState.loadHighScore(HIGH_SCORE_FILE);
-        highScoreLabel.setText("High Score: " + gameState.getHighScore());
+        highScoreLabel.setText(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore());
+        
         // Show summary screen with stats and achievements (if any)
         StringBuilder summary = new StringBuilder();
         summary.append("Game Over!<br>Your score: ").append(gameState.getScore());
@@ -604,15 +581,6 @@ public class ClickTheButtonGame extends JFrame {
     }
 
     /**
-     * Moves the main button to a random location within the window.
-     */
-    private void moveButton() {
-        int x = random.nextInt(GameConstants.WINDOW_WIDTH - button.getWidth());
-        int y = random.nextInt(GameConstants.WINDOW_HEIGHT - button.getHeight() - 60) + 40;
-        button.setLocation(x, y);
-    }
-
-    /**
      * Randomizes the background and button colors using pastel shades.
      * Allows for future theme support.
      */
@@ -624,59 +592,6 @@ public class ClickTheButtonGame extends JFrame {
         for (FakeButton fake : buttonManager.getFakeButtons()) {
             fake.setBackground(UIUtils.getRandomPastelColor(random).darker());
         }
-    }
-
-    /**
-     * Animates the main button fading out, moving, then fading in.
-     */
-    private void fadeMoveButton() {
-        // Fade out, move, fade in
-        new Thread(() -> {
-            try {
-                for (float a = 1.0f; a >= 0.1f; a -= 0.1f) {
-                    final float alpha = a;
-                    SwingUtilities.invokeLater(() -> button.setAlpha(alpha));
-                    Thread.sleep(10);
-                }
-                SwingUtilities.invokeLater(this::moveButton);
-                for (float a = 0.1f; a <= 1.0f; a += 0.1f) {
-                    final float alpha = a;
-                    SwingUtilities.invokeLater(() -> button.setAlpha(alpha));
-                    Thread.sleep(10);
-                }
-            } catch (InterruptedException ignored) {
-            }
-        }).start();
-    }
-
-    /**
-     * Shows a floating score label at the given position.
-     * 
-     * @param value The score value (positive or negative)
-     * @param x     The x-coordinate for the label
-     * @param y     The y-coordinate for the label
-     */
-    private void showFloatingScore(int value, int x, int y) {
-        JLabel floating = new JLabel((value > 0 ? "+" : "") + value);
-        floating.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        floating.setForeground(value > 0 ? new Color(56, 142, 60) : new Color(211, 47, 47));
-        floating.setBounds(x, y, 50, 30);
-        floating.setOpaque(false);
-        add(floating);
-        Timer timer = new Timer(15, null);
-        final int[] dy = { 0 };
-        timer.addActionListener(e -> {
-            dy[0]--;
-            floating.setLocation(x, y + dy[0]);
-            floating.setForeground(new Color(floating.getForeground().getRed(), floating.getForeground().getGreen(),
-                    floating.getForeground().getBlue(), Math.max(0, 255 + dy[0] * 8)));
-            if (dy[0] < -20) {
-                timer.stop();
-                remove(floating);
-                repaint();
-            }
-        });
-        timer.start();
     }
 
     /**

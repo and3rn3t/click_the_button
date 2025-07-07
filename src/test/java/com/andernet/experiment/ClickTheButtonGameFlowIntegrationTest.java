@@ -78,7 +78,7 @@ public class ClickTheButtonGameFlowIntegrationTest {
         JButton overlayButton = (JButton) findComponentByName(game, "overlayButton");
         assertNotNull(overlayButton, "Overlay button should exist");
         SwingUtilities.invokeAndWait(overlayButton::doClick);
-        Thread.sleep(2500);
+        Thread.sleep(3000); // Wait longer for countdown to finish (2.8s + buffer)
         JButton mainButton = (JButton) findComponentByType(game, com.andernet.experiment.ui.AnimatedButton.class);
         assertNotNull(mainButton, "Main button should exist");
         for (int i = 0; i < 2; i++) {
@@ -91,7 +91,7 @@ public class ClickTheButtonGameFlowIntegrationTest {
         waitForOverlayVisible(overlayPanel);
         JLabel scoreLabel = (JLabel) findComponentByName(game, "scoreLabel");
         assertNotNull(scoreLabel);
-        assertTrue(scoreLabel.getText().contains("2"), "Score label should show 2");
+        assertTrue(scoreLabel.getText().contains("2"), "Score label should show 2, but was: " + scoreLabel.getText());
     }
 
     @Test
