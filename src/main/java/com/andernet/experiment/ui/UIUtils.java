@@ -29,4 +29,56 @@ public class UIUtils {
         label.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
         return label;
     }
+    
+    /**
+     * Creates a styled button with common properties
+     */
+    public static JButton createStyledButton(String text, Font font, Color bgColor, Color fgColor) {
+        JButton button = new JButton(text);
+        button.setFont(font);
+        button.setFocusPainted(false);
+        button.setBackground(bgColor);
+        button.setForeground(fgColor);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+        button.setBorderPainted(false);
+        return button;
+    }
+    
+    /**
+     * Creates a game overlay button with consistent styling
+     */
+    public static JButton createOverlayButton(String text) {
+        JButton button = createStyledButton(text, Theme.OVERLAY_BUTTON_FONT, 
+            new Color(33, 150, 243), Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(16, 40, 16, 40));
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setMaximumSize(new Dimension(220, 56));
+        button.setMinimumSize(new Dimension(180, 48));
+        button.setPreferredSize(new Dimension(200, 52));
+        return button;
+    }
+    
+    /**
+     * Creates a settings-style button
+     */
+    public static JButton createSettingsButton(String text) {
+        JButton button = createStyledButton(text, new Font("Segoe UI", Font.PLAIN, 16),
+            new Color(120, 144, 156), Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(8, 24, 8, 24));
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setMaximumSize(new Dimension(160, 36));
+        button.setPreferredSize(new Dimension(140, 32));
+        return button;
+    }
+    
+    /**
+     * Applies responsive positioning based on window size
+     */
+    public static void positionResponsively(JComponent component, double xRatio, double yRatio, int width, int height) {
+        int x = (int) (width * xRatio);
+        int y = (int) (height * yRatio);
+        component.setLocation(x, y);
+    }
 }

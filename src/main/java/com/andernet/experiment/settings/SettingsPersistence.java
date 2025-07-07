@@ -3,12 +3,13 @@ package com.andernet.experiment.settings;
 import java.io.*;
 import java.util.Properties;
 import javax.swing.*;
+import com.andernet.experiment.util.Constants;
 
 /**
  * SettingsPersistence handles saving and loading user settings to a properties file.
  */
 public class SettingsPersistence {
-    private static final String SETTINGS_FILE = System.getProperty("user.home") + File.separator + ".ctb_settings";
+    private static final String SETTINGS_FILE = System.getProperty("user.home") + File.separator + Constants.SETTINGS_FILE;
 
     public static void save(Settings settings) {
         Properties props = new Properties();
@@ -18,11 +19,12 @@ public class SettingsPersistence {
         props.setProperty("soundEnabled", String.valueOf(settings.isSoundEnabled()));
         props.setProperty("mainButtonStartWidth", String.valueOf(settings.getMainButtonStartWidth()));
         props.setProperty("mainButtonStartHeight", String.valueOf(settings.getMainButtonStartHeight()));
-        // Future: theme, etc.
+        
         try (FileOutputStream out = new FileOutputStream(SETTINGS_FILE)) {
-            props.store(out, "ClickTheButtonGame User Settings");
+            props.store(out, Constants.SETTINGS_COMMENT);
         } catch (IOException e) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not save settings.", "File Error", JOptionPane.ERROR_MESSAGE));
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, 
+                Constants.SAVE_ERROR, Constants.FILE_ERROR_TITLE, JOptionPane.ERROR_MESSAGE));
         }
     }
 
@@ -44,9 +46,9 @@ public class SettingsPersistence {
                 settings.setMainButtonStartWidth(Integer.parseInt(props.getProperty("mainButtonStartWidth")));
             if (props.getProperty("mainButtonStartHeight") != null)
                 settings.setMainButtonStartHeight(Integer.parseInt(props.getProperty("mainButtonStartHeight")));
-            // Future: theme, etc.
         } catch (IOException | NumberFormatException e) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Could not load settings.", "File Error", JOptionPane.ERROR_MESSAGE));
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, 
+                Constants.LOAD_ERROR, Constants.FILE_ERROR_TITLE, JOptionPane.ERROR_MESSAGE));
         }
     }
 }

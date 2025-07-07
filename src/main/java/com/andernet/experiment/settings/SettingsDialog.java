@@ -2,6 +2,7 @@ package com.andernet.experiment.settings;
 
 import javax.swing.*;
 import java.awt.*;
+import com.andernet.experiment.util.Constants;
 
 /**
  * SettingsDialog allows the user to customize gameplay options before starting the game.
@@ -17,51 +18,59 @@ public class SettingsDialog extends JDialog {
     private boolean confirmed = false;
 
     public SettingsDialog(JFrame parent, Settings settings) {
-        super(parent, "Game Settings", true);
+        super(parent, Constants.SETTINGS_TITLE, true);
         this.settings = settings;
         setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.gridx = 0; gbc.gridy = 0; gbc.anchor = GridBagConstraints.WEST;
-        add(new JLabel("Game Duration (sec):"), gbc);
+        
+        add(new JLabel(Constants.GAME_DURATION_LABEL), gbc);
         gbc.gridx = 1;
         durationSpinner = new JSpinner(new SpinnerNumberModel(settings.getGameDurationSeconds(), 10, 120, 1));
         add(durationSpinner, gbc);
         gbc.gridx = 0; gbc.gridy++;
-        add(new JLabel("Fake Buttons:"), gbc);
+        
+        add(new JLabel(Constants.FAKE_BUTTONS_LABEL), gbc);
         gbc.gridx = 1;
         fakeButtonsSpinner = new JSpinner(new SpinnerNumberModel(settings.getNumFakeButtons(), 0, 10, 1));
         add(fakeButtonsSpinner, gbc);
         gbc.gridx = 0; gbc.gridy++;
-        add(new JLabel("Button Move Interval (ms):"), gbc);
+        
+        add(new JLabel(Constants.MOVE_INTERVAL_LABEL), gbc);
         gbc.gridx = 1;
         moveIntervalSpinner = new JSpinner(new SpinnerNumberModel(settings.getMoveIntervalMs(), 200, 3000, 100));
         add(moveIntervalSpinner, gbc);
         gbc.gridx = 0; gbc.gridy++;
-        add(new JLabel("Sound Effects:"), gbc);
+        
+        add(new JLabel(Constants.SOUND_EFFECTS_LABEL), gbc);
         gbc.gridx = 1;
-        soundCheckBox = new JCheckBox("Enabled", settings.isSoundEnabled());
+        soundCheckBox = new JCheckBox(Constants.ENABLED_LABEL, settings.isSoundEnabled());
         add(soundCheckBox, gbc);
         gbc.gridx = 0; gbc.gridy++;
-        add(new JLabel("Main Button Width:"), gbc);
+        
+        add(new JLabel(Constants.MAIN_BUTTON_WIDTH_LABEL), gbc);
         gbc.gridx = 1;
         buttonWidthSpinner = new JSpinner(new SpinnerNumberModel(settings.getMainButtonStartWidth(), 60, 300, 5));
         add(buttonWidthSpinner, gbc);
         gbc.gridx = 0; gbc.gridy++;
-        add(new JLabel("Main Button Height:"), gbc);
+        
+        add(new JLabel(Constants.MAIN_BUTTON_HEIGHT_LABEL), gbc);
         gbc.gridx = 1;
         buttonHeightSpinner = new JSpinner(new SpinnerNumberModel(settings.getMainButtonStartHeight(), 30, 150, 5));
         add(buttonHeightSpinner, gbc);
         gbc.gridx = 0; gbc.gridy++;
         gbc.gridwidth = 2;
+        
         JPanel buttonPanel = new JPanel();
-        JButton ok = new JButton("OK");
+        JButton ok = new JButton(Constants.OK);
         ok.setName("okButton");
-        JButton cancel = new JButton("Cancel");
+        JButton cancel = new JButton(Constants.CANCEL);
         cancel.setName("cancelButton");
         buttonPanel.add(ok);
         buttonPanel.add(cancel);
         add(buttonPanel, gbc);
+        
         ok.addActionListener(e -> {
             applySettings();
             confirmed = true;

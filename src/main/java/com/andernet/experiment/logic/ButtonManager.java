@@ -2,6 +2,7 @@ package com.andernet.experiment.logic;
 
 import com.andernet.experiment.ui.FakeButton;
 import com.andernet.experiment.util.ResourceManager;
+import com.andernet.experiment.util.Constants;
 import com.andernet.experiment.settings.Settings;
 import javax.swing.*;
 
@@ -32,15 +33,15 @@ public class ButtonManager {
         }
         fakeButtons = new FakeButton[settings.getNumFakeButtons()];
         for (int i = 0; i < settings.getNumFakeButtons(); i++) {
-            fakeButtons[i] = new FakeButton("Fake!");
+            fakeButtons[i] = new FakeButton(Constants.FAKE);
             fakeButtons[i].addActionListener(e -> {
-                gameState.decrementScore(2);
-                scoreLabel.setText("Score: " + gameState.getScore());
+                gameState.decrementScore(GameConstants.FAKE_BUTTON_PENALTY);
+                scoreLabel.setText(Constants.SCORE_PREFIX + gameState.getScore());
                 if (settings.isSoundEnabled()) ResourceManager.playFakeBeep();
                 moveAllButtons.run();
                 randomizeColors.run();
             });
-            fakeButtons[i].setToolTipText("Don't click! These are fake buttons.");
+            fakeButtons[i].setToolTipText(Constants.FAKE_BUTTON_TOOLTIP);
             parent.add(fakeButtons[i]);
         }
     }
@@ -48,7 +49,7 @@ public class ButtonManager {
     public void moveFakeButtons() {
         for (FakeButton fake : fakeButtons) {
             int x = (int) (parent.getWidth() * Math.random() * 0.8);
-            int y = (int) (parent.getHeight() * Math.random() * 0.7 + 40);
+            int y = (int) (parent.getHeight() * Math.random() * 0.7 + GameConstants.FAKE_BUTTON_MARGIN_TOP);
             fake.setLocation(x, y);
         }
     }

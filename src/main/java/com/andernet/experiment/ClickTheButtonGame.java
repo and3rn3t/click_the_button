@@ -14,6 +14,7 @@ import com.andernet.experiment.logic.ButtonManager;
 import com.andernet.experiment.ui.Theme;
 import com.andernet.experiment.util.ResourceManager;
 import com.andernet.experiment.util.MusicManager;
+import com.andernet.experiment.util.Constants;
 import com.andernet.experiment.settings.Settings;
 import com.andernet.experiment.settings.SettingsDialog;
 import com.andernet.experiment.settings.SettingsPersistence;
@@ -69,9 +70,21 @@ public class ClickTheButtonGame extends JFrame {
      */
     public ClickTheButtonGame(Settings settings) {
         this.settings = settings;
+        initializeWindow();
+        initializeGameState();
+        createUIComponents();
+        setupKeyboardShortcuts();
+        setupEventHandlers();
+        finalizeInitialization();
+    }
+    
+    /**
+     * Initialize basic window properties
+     */
+    private void initializeWindow() {
         setUndecorated(true);
         getRootPane().setWindowDecorationStyle(JRootPane.FRAME);
-        setTitle("Click the Button Game");
+        setTitle(Constants.APP_TITLE);
         setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(null);
@@ -84,36 +97,63 @@ public class ClickTheButtonGame extends JFrame {
                 GradientPaint gp = new GradientPaint(0, 0, Theme.BACKGROUND_GRADIENT_TOP, 0, getHeight(),
                         Theme.BACKGROUND_GRADIENT_BOTTOM);
                 g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), GameConstants.BUTTON_RADIUS, GameConstants.BUTTON_RADIUS);
             }
         });
         getContentPane().setLayout(null);
-
-        Font labelFont = Theme.LABEL_FONT;
-
+        setResizable(true);
+    }
+    
+    /**
+     * Initialize game state and ensure valid settings
+     */
+    private void initializeGameState() {
         // Ensure minimum duration for test compatibility
         if (settings.getGameDurationSeconds() < 10) {
             settings.setGameDurationSeconds(10);
         }
         gameState = new GameState(settings.getGameDurationSeconds());
-        // Load high score from disk
         gameState.loadHighScore(HIGH_SCORE_FILE);
-
-        // Score label at top left
-        scoreLabel = UIUtils.createLabel("Score: 0", 10, 10, 120, 35, labelFont);
+    }
+    
+    /**
+     * Create all UI components
+     */
+    private void createUIComponents() {
+        createLabels();
+        createMainButton();
+        createFakeButtons();
+        createOverlayPanel();
+        createControlButtons();
+    }
+    
+    /**
+     * Create score, timer, and high score labels
+     */
+    private void createLabels() {
+        Font labelFont = Theme.LABEL_FONT;
+        
+        scoreLabel = UIUtils.createLabel(Constants.SCORE_PREFIX + "0", 10, 10, 120, 35, labelFont);
         scoreLabel.setName("scoreLabel");
+        scoreLabel.setToolTipText(Constants.SCORE_TOOLTIP);
         add(scoreLabel);
-        // Timer label at top center
-        timerLabel = UIUtils.createLabel("Time: " + settings.getGameDurationSeconds(), 140, 10, 120, 35, labelFont);
+        
+        timerLabel = UIUtils.createLabel(Constants.TIME_PREFIX + settings.getGameDurationSeconds(), 140, 10, 120, 35, labelFont);
         timerLabel.setName("timerLabel");
+        timerLabel.setToolTipText(Constants.TIMER_TOOLTIP);
         add(timerLabel);
-        // High score label at top right
-        highScoreLabel = UIUtils.createLabel("High Score: " + gameState.getHighScore(), 270, 10, 150, 35, labelFont);
+        
+        highScoreLabel = UIUtils.createLabel(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore(), 270, 10, 150, 35, labelFont);
         highScoreLabel.setName("highScoreLabel");
+        highScoreLabel.setToolTipText(Constants.HIGH_SCORE_TOOLTIP);
         add(highScoreLabel);
-
-        // Main animated button setup
-        button = new AnimatedButton("Click me!");
+    }
+    
+    /**
+     * Create and configure the main game button
+     */
+    private void createMainButton() {
+        button = new AnimatedButton(Constants.CLICK_ME);
         button.setName("mainButton");
         button.setFont(Theme.BUTTON_FONT);
         button.setFocusPainted(false);
@@ -126,24 +166,9 @@ public class ClickTheButtonGame extends JFrame {
         button.setBounds((GameConstants.WINDOW_WIDTH - settings.getMainButtonStartWidth()) / 2,
                 (GameConstants.WINDOW_HEIGHT - settings.getMainButtonStartHeight()) / 2,
                 settings.getMainButtonStartWidth(), settings.getMainButtonStartHeight());
-        button.setToolTipText("Click me to score points!");
-        button.addActionListener(e -> {
-            // Main button click: increment score, update UI, play sound, advance level
-            gameState.incrementScore();
-            highScoreLabel.setText("High Score: " + gameState.getHighScore());
-            scoreLabel.setText("Score: " + gameState.getScore());
-            if (settings.isSoundEnabled()) ResourceManager.playBeep();
-            nextLevel();
-            moveAllButtons();
-            randomizeColors();
-            // Quick highlight effect
-            Color orig = button.getBackground();
-            button.setBackground(orig.brighter());
-            Timer t = new Timer(120, ev -> button.setBackground(orig));
-            t.setRepeats(false);
-            t.start();
-            showFloatingScore(1, button.getX() + button.getWidth() / 2, button.getY());
-        });
+        button.setToolTipText(Constants.MAIN_BUTTON_TOOLTIP);
+        
+        button.addActionListener(e -> handleMainButtonClick());
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
@@ -156,11 +181,43 @@ public class ClickTheButtonGame extends JFrame {
             }
         });
         add(button);
-        // Modularized: use ButtonManager for fake buttons
+    }
+    
+    /**
+     * Handle main button click action
+     */
+    private void handleMainButtonClick() {
+        gameState.incrementScore();
+        highScoreLabel.setText(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore());
+        scoreLabel.setText(Constants.SCORE_PREFIX + gameState.getScore());
+        if (settings.isSoundEnabled()) ResourceManager.playBeep();
+        nextLevel();
+        moveAllButtons();
+        randomizeColors();
+        
+        // Quick highlight effect
+        Color orig = button.getBackground();
+        button.setBackground(orig.brighter());
+        Timer t = new Timer(GameConstants.BUTTON_HIGHLIGHT_DURATION, ev -> button.setBackground(orig));
+        t.setRepeats(false);
+        t.start();
+        
+        showFloatingScore(GameConstants.MAIN_BUTTON_SCORE, button.getX() + button.getWidth() / 2, button.getY());
+    }
+    
+    /**
+     * Create fake buttons using ButtonManager
+     */
+    private void createFakeButtons() {
         buttonManager = new ButtonManager(settings, gameState, scoreLabel, this::moveAllButtons, this::randomizeColors,
                 (JPanel) getContentPane());
         buttonManager.createFakeButtons();
-        // Overlay panel for start/game over screens
+    }
+    
+    /**
+     * Create overlay panel for start/game over screens
+     */
+    private void createOverlayPanel() {
         overlayPanel = new GameOverlayPanel(GameConstants.WINDOW_WIDTH, GameConstants.WINDOW_HEIGHT);
         overlayPanel.getOverlayButton().setName("overlayButton");
         overlayPanel.getSettingsButton().setName("settingsButton");
@@ -168,88 +225,54 @@ public class ClickTheButtonGame extends JFrame {
             hideOverlay();
             startGame();
         });
+        
         // Settings button on overlay opens settings dialog
-        overlayPanel.getSettingsButton().addActionListener(e -> {
-            JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
-            SettingsDialog dialog = new SettingsDialog(parent, settings);
-            dialog.setVisible(true);
-            if (dialog.isConfirmed()) {
-                gameState = new GameState(settings.getGameDurationSeconds());
-                gameState.loadHighScore(HIGH_SCORE_FILE);
-                timerLabel.setText("Time: " + settings.getGameDurationSeconds());
-                flushComponentUI(timerLabel);
-                scoreLabel.setText("Score: 0");
-                flushComponentUI(scoreLabel);
-                highScoreLabel.setText("High Score: " + gameState.getHighScore());
-                flushComponentUI(highScoreLabel);
-                buttonManager.createFakeButtons();
-                moveTimer.setDelay(settings.getMoveIntervalMs());
-                moveTimer.setInitialDelay(settings.getMoveIntervalMs());
-                revalidate();
-                repaint();
-                // Save settings after dialog
-                SettingsPersistence.save(settings);
-                // Extra: sleep to allow UI update in test envs
-                try { Thread.sleep(100); } catch (InterruptedException ignored) {}
-                // Force timer label to use actual gameState value and flush
-                timerLabel.setText("Time: " + gameState.getTimeLeft());
-                flushComponentUI(timerLabel);
-            }
-        });
+        overlayPanel.getSettingsButton().addActionListener(e -> handleSettingsButtonClick());
         overlayPanel.setVisible(true);
         getLayeredPane().add(overlayPanel, JLayeredPane.POPUP_LAYER);
-        // Ensure game UI is hidden until game starts
-        setGameUIVisible(false);
-        showOverlay("Click the Button Game", "Start Game", false);
-
-        // Start the button move timer (moves every 1 second)
-        moveTimer = new Timer(settings.getMoveIntervalMs(), e -> moveAllButtons());
-        moveTimer.setInitialDelay(settings.getMoveIntervalMs());
-        moveTimer.start();
-
-        // Keyboard shortcuts for overlay: Enter = start, Esc = quit
-        overlayPanel.getOverlayButton().setMnemonic('S');
-        overlayPanel.getSettingsButton().setMnemonic('E');
-        getRootPane().setDefaultButton(overlayPanel.getOverlayButton());
-        getRootPane().registerKeyboardAction(e -> {
-            if (overlayPanel.isVisible()) {
-                hideOverlay();
-                startGame();
-            }
-        }, KeyStroke.getKeyStroke("ENTER"), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        getRootPane().registerKeyboardAction(e -> {
-            if (overlayPanel.isVisible()) {
-                int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to quit?", "Quit", JOptionPane.YES_NO_OPTION);
-                if (result == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                }
-            }
-        }, KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        // Pause/resume with P key
-        getRootPane().registerKeyboardAction(e -> {
-            if (gameTimer != null && gameTimer.isRunning()) {
-                gameTimer.stop();
-                moveTimer.stop();
-                showOverlay("Paused", "Resume", false);
-            } else if (overlayPanel.isVisible() && overlayPanel.getOverlayButton().getText().equals("Resume")) {
-                hideOverlay();
-                gameTimer.start();
-                moveTimer.start();
-            }
-        }, KeyStroke.getKeyStroke('P'), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        // Tooltips for accessibility
-        scoreLabel.setToolTipText("Your current score");
-        timerLabel.setToolTipText("Time left in the round");
-        highScoreLabel.setToolTipText("Your all-time high score");
-        button.setToolTipText("Click me to score points!");
-        for (FakeButton fake : buttonManager.getFakeButtons()) {
-            fake.setToolTipText("Don't click! These are fake buttons.");
+    }
+    
+    /**
+     * Handle settings button click
+     */
+    private void handleSettingsButtonClick() {
+        JFrame parent = (JFrame) SwingUtilities.getWindowAncestor(this);
+        SettingsDialog dialog = new SettingsDialog(parent, settings);
+        dialog.setVisible(true);
+        if (dialog.isConfirmed()) {
+            gameState = new GameState(settings.getGameDurationSeconds());
+            gameState.loadHighScore(HIGH_SCORE_FILE);
+            timerLabel.setText(Constants.TIME_PREFIX + settings.getGameDurationSeconds());
+            flushComponentUI(timerLabel);
+            scoreLabel.setText(Constants.SCORE_PREFIX + "0");
+            flushComponentUI(scoreLabel);
+            highScoreLabel.setText(Constants.HIGH_SCORE_PREFIX + gameState.getHighScore());
+            flushComponentUI(highScoreLabel);
+            buttonManager.createFakeButtons();
+            moveTimer.setDelay(settings.getMoveIntervalMs());
+            moveTimer.setInitialDelay(settings.getMoveIntervalMs());
+            revalidate();
+            repaint();
+            SettingsPersistence.save(settings);
+            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            timerLabel.setText(Constants.TIME_PREFIX + gameState.getTimeLeft());
+            flushComponentUI(timerLabel);
         }
-        overlayPanel.getOverlayButton().setToolTipText("Start or restart the game");
-        overlayPanel.getSettingsButton().setToolTipText("Change game settings");
-
-        // Add a mute/unmute button in the top right
-        JButton muteButton = new JButton(settings.isSoundEnabled() ? "🔊" : "🔇");
+    }
+    
+    /**
+     * Create control buttons (mute, help)
+     */
+    private void createControlButtons() {
+        createMuteButton();
+        createHelpButton();
+    }
+    
+    /**
+     * Create mute/unmute button
+     */
+    private void createMuteButton() {
+        JButton muteButton = new JButton(settings.isSoundEnabled() ? Constants.SOUND_ON : Constants.SOUND_OFF);
         muteButton.setName("muteButton");
         muteButton.setBounds(WINDOW_WIDTH - 40, 5, 32, 32);
         muteButton.setFocusPainted(false);
@@ -257,20 +280,24 @@ public class ClickTheButtonGame extends JFrame {
         muteButton.setContentAreaFilled(false);
         muteButton.setOpaque(false);
         muteButton.setFont(new Font("Segoe UI Symbol", Font.PLAIN, 20));
-        muteButton.setToolTipText("Toggle sound effects");
+        muteButton.setToolTipText(Constants.MUTE_BUTTON_TOOLTIP);
         muteButton.addActionListener(e -> {
             settings.setSoundEnabled(!settings.isSoundEnabled());
-            muteButton.setText(settings.isSoundEnabled() ? "🔊" : "🔇");
+            muteButton.setText(settings.isSoundEnabled() ? Constants.SOUND_ON : Constants.SOUND_OFF);
             if (settings.isSoundEnabled()) {
-                MusicManager.playBackgroundMusic("/audio/background.wav", true);
+                MusicManager.playBackgroundMusic(Constants.BACKGROUND_MUSIC, true);
             } else {
                 MusicManager.stopBackgroundMusic();
             }
         });
         add(muteButton);
-
-        // Add a help/info button to the overlay
-        JButton helpButton = new JButton("?");
+    }
+    
+    /**
+     * Create help button
+     */
+    private void createHelpButton() {
+        JButton helpButton = new JButton(Constants.HELP);
         helpButton.setName("helpButton");
         helpButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
         helpButton.setFocusPainted(false);
@@ -278,49 +305,139 @@ public class ClickTheButtonGame extends JFrame {
         helpButton.setForeground(new Color(33, 33, 33));
         helpButton.setBorder(BorderFactory.createEmptyBorder(6, 16, 6, 16));
         helpButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        helpButton.setToolTipText("How to play");
+        helpButton.setToolTipText(Constants.HELP_BUTTON_TOOLTIP);
         helpButton.setBounds(10, 10, 40, 36);
         add(helpButton);
         helpButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this,
-                    "Click the blue button as many times as you can before time runs out!\n" +
-                            "Avoid the fake buttons—they subtract points.\n" +
-                            "You can change settings or mute sound using the buttons above.\n\n" +
-                            "Keyboard Shortcuts:\n" +
-                            "  Enter: Start/Resume\n  Esc: Quit\n  P: Pause/Resume\n  +/-: Adjust font size\n  Tab: Navigate\n",
-                    "How to Play", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, Constants.HELP_MESSAGE, Constants.HELP_BUTTON_TOOLTIP, JOptionPane.INFORMATION_MESSAGE);
         });
-        // Font size adjustment for accessibility
-        // Register font size adjustment keyboard actions only on the root pane
-        getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        getRootPane().registerKeyboardAction(e -> adjustFontSize(2), KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, KeyEvent.SHIFT_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
-        getRootPane().registerKeyboardAction(e -> adjustFontSize(-2), KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        // Make window resizable and adapt layout
-        setResizable(true);
-        // Responsive layout: reposition/move main and fake buttons on resize
+    }
+    
+    /**
+     * Setup all keyboard shortcuts
+     */
+    private void setupKeyboardShortcuts() {
+        setupFontSizeAdjustment();
+        setupOverlayShortcuts();
+        setupPauseResume();
+    }
+    
+    /**
+     * Setup font size adjustment shortcuts
+     */
+    private void setupFontSizeAdjustment() {
+        getRootPane().registerKeyboardAction(e -> adjustFontSize(GameConstants.FONT_SIZE_DELTA), 
+            KeyStroke.getKeyStroke('+'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> adjustFontSize(GameConstants.FONT_SIZE_DELTA), 
+            KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, KeyEvent.SHIFT_DOWN_MASK), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        getRootPane().registerKeyboardAction(e -> adjustFontSize(-GameConstants.FONT_SIZE_DELTA), 
+            KeyStroke.getKeyStroke('-'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+    
+    /**
+     * Setup overlay keyboard shortcuts
+     */
+    private void setupOverlayShortcuts() {
+        overlayPanel.getOverlayButton().setMnemonic('S');
+        overlayPanel.getSettingsButton().setMnemonic('E');
+        getRootPane().setDefaultButton(overlayPanel.getOverlayButton());
+        
+        getRootPane().registerKeyboardAction(e -> {
+            if (overlayPanel.isVisible()) {
+                hideOverlay();
+                startGame();
+            }
+        }, KeyStroke.getKeyStroke("ENTER"), JComponent.WHEN_IN_FOCUSED_WINDOW);
+        
+        getRootPane().registerKeyboardAction(e -> {
+            if (overlayPanel.isVisible()) {
+                int result = JOptionPane.showConfirmDialog(this, Constants.QUIT_CONFIRMATION, Constants.QUIT_TITLE, JOptionPane.YES_NO_OPTION);
+                if (result == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            }
+        }, KeyStroke.getKeyStroke("ESCAPE"), JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+    
+    /**
+     * Setup pause/resume functionality
+     */
+    private void setupPauseResume() {
+        getRootPane().registerKeyboardAction(e -> {
+            if (gameTimer != null && gameTimer.isRunning()) {
+                gameTimer.stop();
+                moveTimer.stop();
+                showOverlay(Constants.PAUSED, Constants.RESUME, false);
+            } else if (overlayPanel.isVisible() && overlayPanel.getOverlayButton().getText().equals(Constants.RESUME)) {
+                hideOverlay();
+                gameTimer.start();
+                moveTimer.start();
+            }
+        }, KeyStroke.getKeyStroke('P'), JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+    
+    /**
+     * Setup event handlers and tooltips
+     */
+    private void setupEventHandlers() {
+        setupTooltips();
+        setupResizeHandler();
+    }
+    
+    /**
+     * Setup tooltips for accessibility
+     */
+    private void setupTooltips() {
+        for (FakeButton fake : buttonManager.getFakeButtons()) {
+            fake.setToolTipText(Constants.FAKE_BUTTON_TOOLTIP);
+        }
+        overlayPanel.getOverlayButton().setToolTipText(Constants.START_BUTTON_TOOLTIP);
+        overlayPanel.getSettingsButton().setToolTipText(Constants.SETTINGS_BUTTON_TOOLTIP);
+    }
+    
+    /**
+     * Setup window resize handler
+     */
+    private void setupResizeHandler() {
         addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
                 int w = getWidth();
                 int h = getHeight();
-                scoreLabel.setLocation((int) (w * 0.025), (int) (h * 0.025));
-                timerLabel.setLocation((int) (w * 0.35), (int) (h * 0.025));
-                highScoreLabel.setLocation((int) (w * 0.675), (int) (h * 0.025));
+                UIUtils.positionResponsively(scoreLabel, GameConstants.LABEL_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
+                UIUtils.positionResponsively(timerLabel, GameConstants.TIMER_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
+                UIUtils.positionResponsively(highScoreLabel, GameConstants.HIGHSCORE_LEFT_MARGIN_RATIO, GameConstants.LABEL_TOP_MARGIN_RATIO, w, h);
                 overlayPanel.setBounds(0, 0, w, h);
+                
                 // Reposition main button proportionally
                 button.setLocation((int) (w * 0.5 - button.getWidth() / 2), (int) (h * 0.5 - button.getHeight() / 2));
+                
                 // Reposition fake buttons randomly within new bounds
                 for (FakeButton fake : buttonManager.getFakeButtons()) {
                     int fx = (int) (Math.random() * (w - fake.getWidth()));
-                    int fy = (int) (Math.random() * (h - fake.getHeight() - 60) + 40);
+                    int fy = (int) (Math.random() * (h - fake.getHeight() - GameConstants.FAKE_BUTTON_MARGIN_BOTTOM) + GameConstants.FAKE_BUTTON_MARGIN_TOP);
                     fake.setLocation(fx, fy);
                 }
             }
         });
+    }
+    
+    /**
+     * Finalize initialization
+     */
+    private void finalizeInitialization() {
+        // Ensure game UI is hidden until game starts
+        setGameUIVisible(false);
+        showOverlay(Constants.APP_TITLE, Constants.START_GAME, false);
+
+        // Start the button move timer
+        moveTimer = new Timer(settings.getMoveIntervalMs(), e -> moveAllButtons());
+        moveTimer.setInitialDelay(settings.getMoveIntervalMs());
+        moveTimer.start();
+
         // Start background music if sound is enabled
         if (settings.isSoundEnabled()) {
-            MusicManager.playBackgroundMusic("/audio/background.wav", true);
+            MusicManager.playBackgroundMusic(Constants.BACKGROUND_MUSIC, true);
         }
     }
 

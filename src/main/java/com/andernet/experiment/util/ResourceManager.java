@@ -5,14 +5,17 @@ import java.net.URL;
 
 public class ResourceManager {
     public static void playBeep() {
-        playSound("/audio/click.wav");
+        playSound(Constants.CLICK_SOUND);
     }
+    
     public static void playFakeBeep() {
-        playSound("/audio/fake.wav");
+        playSound(Constants.FAKE_SOUND);
     }
+    
     public static void playEndBeep() {
-        playSound("/audio/gameover.wav");
+        playSound(Constants.GAMEOVER_SOUND);
     }
+    
     public static void playSound(String resourcePath) {
         new Thread(() -> {
             try {
